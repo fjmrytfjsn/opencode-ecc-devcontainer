@@ -69,11 +69,8 @@
   },
   "postCreateCommand": ".devcontainer/setup.sh",
   "postStartCommand": ".devcontainer/startup.sh",
-  "onCreateCommand": {
-    "interactive-setup": ".devcontainer/interactive-setup.sh"
-  },
   "postAttachCommand": {
-    "welcome": "echo '🚀 OpenCode ECC DevContainer へようこそ！' && echo '📍 プロジェクト: '$(grep PROJECT_NAME .env 2>/dev/null | cut -d= -f2 | tr -d '\"' || echo 'セットアップ待ち') && echo '🎨 OpenChamber: http://localhost:3000' && echo '🤖 OpenCode CLI: http://localhost:4095'"
+    "welcome": "echo '🚀 OpenCode ECC DevContainer へようこそ！' && echo '' && echo '📋 次のステップ:' && echo '  1️⃣ .env.template を .env にコピー' && echo '  2️⃣ 必要に応じて .env を編集' && echo '  3️⃣ 初回プロジェクト設定: ./.devcontainer/interactive-setup.sh' && echo '' && echo '🎨 サービスURL:' && echo '  📍 OpenChamber: http://localhost:3000' && echo '  🤖 OpenCode CLI: http://localhost:4095' && echo '  📊 ダッシュボード: http://localhost:8080'"
   },
   "remoteUser": "vscode",
   "mounts": [
