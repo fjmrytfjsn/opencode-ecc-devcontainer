@@ -388,8 +388,7 @@ DevContainer に自動インストールされる拡張機能:
 ## 🐛 トラブルシューティング
 
 ### ❌ **ECC ajv エラー**
-
-```log
+```
 Error: Cannot find module 'ajv'
 ```
 
@@ -405,6 +404,24 @@ ECC_DIR=$(npm list -g ecc-universal | head -n1 | awk '{print $1}')/node_modules/
 cd "$ECC_DIR"
 npm install ajv
 npm install  # 全依存関係再インストール
+```
+
+### ❌ **ECC 権限エラー**
+```
+Error: EACCES: permission denied, mkdir '/home/vscode/.opencode/.agents/skills/api-design'
+```
+
+**原因**: vscode ユーザーの .opencode ディレクトリ権限不足  
+**解決方法**:
+
+```bash
+# 🔧 自動修正スクリプト実行
+./scripts/fix-permissions.sh
+
+# または手動修正
+sudo chown -R vscode:vscode /home/vscode/.opencode
+chmod -R 755 /home/vscode/.opencode
+chmod -R u+w /home/vscode/.opencode
 ```
 
 ### ❌ **DevContainer ビルド失敗**

@@ -67,13 +67,15 @@ RUN if ! id "vscode" &>/dev/null; then \
     fi && \
     usermod -aG sudo vscode 2>/dev/null || true && \
     echo "vscode ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers && \
-    # 必要ディレクトリ作成
+    # 必要ディレクトリ作成（権限エラー対策強化）
     mkdir -p /home/vscode/{.opencode,.config,workspace} && \
+    mkdir -p /home/vscode/.opencode/{.agents,.agents/skills} && \
     # 環境変数設定を .bashrc に追加
     echo 'export VOLTA_HOME="/opt/volta"' >> /home/vscode/.bashrc && \
     echo 'export PATH="/opt/volta/bin:/opt/cargo/bin:$PATH"' >> /home/vscode/.bashrc && \
-    # 権限設定（一括）
-    chown -R vscode:vscode /home/vscode
+    # 権限設定（一括・強化版）
+    chown -R vscode:vscode /home/vscode && \
+    chmod -R 755 /home/vscode/.opencode
 
 # ===== 最終設定（変更頻度高 -> 下位レイヤー） =====
 WORKDIR /workspace

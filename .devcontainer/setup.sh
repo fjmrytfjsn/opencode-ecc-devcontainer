@@ -61,7 +61,15 @@ fi
 
 # ECC の設定適用
 echo "   ECC設定を適用中..."
-mkdir -p ~/.opencode
+
+# .opencode ディレクトリ権限修正（EACCES エラー対策）
+echo "   🔒 .opencode ディレクトリ権限設定中..."
+mkdir -p ~/.opencode ~/.opencode/.agents ~/.opencode/.agents/skills
+sudo chown -R vscode:vscode ~/.opencode 2>/dev/null || chown -R vscode:vscode ~/.opencode 2>/dev/null || true
+chmod -R 755 ~/.opencode 2>/dev/null || true
+
+# ホームディレクトリ全体の権限確認（念のため）
+sudo chown -R vscode:vscode /home/vscode 2>/dev/null || chown -R vscode:vscode /home/vscode 2>/dev/null || true
 
 # ajv 依存関係エラー修正（既知の問題）
 echo "   🔧 ajv 依存関係修正中..."
