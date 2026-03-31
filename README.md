@@ -33,7 +33,7 @@
 ### 1. Tailscale Auth Key の取得
 
 1. [Tailscale Admin Console](https://login.tailscale.com/admin/settings/keys) にアクセス
-2. **Generate auth key** をクリック  
+2. **Generate auth key** をクリック
 3. **Reusable** と **Ephemeral** をチェック
 4. Auth Key をコピー（`tskey-auth-xxxxxxxxxx` の形式）
 
@@ -66,10 +66,11 @@ bash .devcontainer/interactive-setup.sh
 ```
 
 **セットアップフロー**:
+
 ```bash
 # 🎯 プロジェクト情報入力
 プロジェクト名: my-ai-assistant
-説明: AIアシスタント開発プロジェクト  
+説明: AIアシスタント開発プロジェクト
 作者名: Developer
 
 # 🔐 セキュリティ設定（オプション）
@@ -83,9 +84,10 @@ Tailscale Auth Key: tskey-auth-xxxxxxxxxx
 ```
 
 **自動生成されるファイル**:
+
 - ✅ `.env` - 環境変数設定
 - ✅ `README.md` - プロジェクト専用説明書
-- ✅ `package.json` - Node.js設定  
+- ✅ `package.json` - Node.js設定
 - ✅ `src/app.js` - メインアプリケーション
 - ✅ `scripts/start-services.sh` - サービス起動スクリプト
 - ✅ `docs/SETUP.md` - セットアップガイド
@@ -111,13 +113,14 @@ nano .env
 ./scripts/build-optimized.sh
 
 # 📊 ビルド時間比較
-# 従来版: ~8-12分  
+# 従来版: ~8-12分
 # 最適化版: ~4-6分  ⚡
 ```
 
 **最適化内容**:
+
 - ✅ マルチステージビルド
-- ✅ レイヤーキャッシュ最適化  
+- ✅ レイヤーキャッシュ最適化
 - ✅ 並列インストール
 - ✅ APTキャッシュマウント
 - ✅ 重複排除
@@ -130,7 +133,7 @@ nano .env
 
 # 📊 テスト結果例
 ✅ 成功: 32/35 テスト
-❌ 失敗: 3/35 テスト  
+❌ 失敗: 3/35 テスト
 📈 成功率: 91.4%
 🎉 優秀！DevContainerは正常に設定されています
 ```
@@ -138,6 +141,7 @@ nano .env
 ## 🎨 **Tailscale統合ダッシュボード**
 
 ### 📊 **統合管理機能**
+
 対話式セットアップで生成されるダッシュボードから全ての操作が可能：
 
 ```bash
@@ -146,7 +150,7 @@ nano .env
 
 # 主要機能
 ✅ Tailscale設定・起動・監視
-✅ サービス状態リアルタイム監視  
+✅ サービス状態リアルタイム監視
 ✅ ネットワーク情報自動検出
 ✅ QRコード生成
 ✅ ワンクリックアクセス
@@ -154,18 +158,19 @@ nano .env
 
 #### **🔗 Tailscale統合機能**
 
-| **状態** | **ダッシュボード表示** | **可能な操作** |
-|---------|---------------------|---------------|
-| **未設定** | ❌ 未接続 + 設定フォーム | Auth Key入力→接続開始 |
-| **接続中** | ✅ 接続済み + IP表示 | 再接続・停止・QRコード |
-| **エラー** | ⚠️ 接続失敗 + エラー表示 | 再試行・設定確認 |
+| **状態**   | **ダッシュボード表示**   | **可能な操作**         |
+| ---------- | ------------------------ | ---------------------- |
+| **未設定** | ❌ 未接続 + 設定フォーム | Auth Key入力→接続開始  |
+| **接続中** | ✅ 接続済み + IP表示     | 再接続・停止・QRコード |
+| **エラー** | ⚠️ 接続失敗 + エラー表示 | 再試行・設定確認       |
 
 #### **💡 ワンクリック操作**
+
 ```
 🔗 Tailscale制御パネル
 ┌─────────────────────────────────┐
 │ ✅ 接続中                        │
-│ 📍 IP: 100.64.0.50              │  
+│ 📍 IP: 100.64.0.50              │
 │ 🏷️ ホスト: my-project-dev       │
 │ 📱 接続デバイス: 3台             │
 ├─────────────────────────────────┤
@@ -174,6 +179,7 @@ nano .env
 ```
 
 ### 🌐 **リアルタイム監視**
+
 - **30秒自動更新**: サービス状態・Tailscale接続を自動監視
 - **ステータス表示**: 緑●=動作中、赤●=停止
 - **IP自動検出**: ローカル・LAN・Tailscale IPを自動表示
@@ -182,6 +188,7 @@ nano .env
 ## 📱 **Auth Key無しでも完全動作**
 
 ### 🏠 **ローカル開発モード**
+
 Tailscale Auth Key未設定でもフル機能で動作：
 
 ```bash
@@ -192,11 +199,12 @@ code opencode-ecc-devcontainer
 
 # 2. ローカルでアクセス
 🎨 OpenChamber:    http://localhost:3000
-🤖 OpenCode CLI:   http://localhost:4095  
+🤖 OpenCode CLI:   http://localhost:4095
 🚀 ダッシュボード:  http://localhost:8080
 ```
 
 ### 📶 **LAN内アクセス**
+
 同じWiFi/ネットワーク内のデバイスからアクセス：
 
 ```bash
@@ -220,17 +228,19 @@ code opencode-ecc-devcontainer
 
 ## 🎯 **使用パターン**
 
-| **用途** | **設定** | **アクセス方法** |
-|---------|----------|------------------|
-| **ローカル開発** | Auth Key不要 | `localhost:3000` |
-| **LAN内共有** | Auth Key不要 | `192.168.x.x:3000` |  
+| **用途**         | **設定**     | **アクセス方法**    |
+| ---------------- | ------------ | ------------------- |
+| **ローカル開発** | Auth Key不要 | `localhost:3000`    |
+| **LAN内共有**    | Auth Key不要 | `192.168.x.x:3000`  |
 | **モバイル開発** | Auth Key設定 | `tailscale-ip:3000` |
-| **リモート作業** | Auth Key設定 | 世界中どこからでも |
+| **リモート作業** | Auth Key設定 | 世界中どこからでも  |
 
 # オプション: カスタム設定
+
 TAILSCALE_HOSTNAME=my-opencode-dev
 ECC_PROFILE=developer
-```
+
+````
 
 **VS Code Command Palette** (Ctrl+Shift+P) から:
 
@@ -267,7 +277,7 @@ ecc skills list
 # サンプルアプリ起動
 cd sample-project
 npm run dev
-```
+````
 
 ## 🎯 使用例
 
@@ -376,6 +386,42 @@ DevContainer に自動インストールされる拡張機能:
 - Tailscale Extension (将来追加予定)
 
 ## 🐛 トラブルシューティング
+
+### ❌ **ECC ajv エラー**
+
+```log
+Error: Cannot find module 'ajv'
+```
+
+**原因**: ECCパッケージングの依存関係問題  
+**解決方法**:
+
+```bash
+# 🔧 自動修正スクリプト実行
+./scripts/fix-ecc-ajv.sh
+
+# または手動修正
+ECC_DIR=$(npm list -g ecc-universal | head -n1 | awk '{print $1}')/node_modules/ecc-universal
+cd "$ECC_DIR"
+npm install ajv
+npm install  # 全依存関係再インストール
+```
+
+### ❌ **DevContainer ビルド失敗**
+
+```
+useradd: user 'vscode' already exists
+```
+
+**解決済み**: 最新テンプレートで修正済み
+
+### ❌ **DevContainer起動時停止**
+
+```
+Run in container: /bin/sh -c .devcontainer/interactive-setup.sh
+```
+
+**解決済み**: 手動実行方式に変更済み
 
 ### Tailscale 接続問題
 

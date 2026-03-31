@@ -49,7 +49,14 @@ RUN --mount=type=cache,target=/tmp/npm-cache \
     npm install -g --prefer-offline @openchamber/web & \
     npm install -g --prefer-offline ecc-universal & \
     # 並列処理完了待ち
-    wait
+    wait && \
+    # ECC ajv依存関係修正（既知の問題対応）
+    ECC_DIR=$(npm list -g ecc-universal 2>/dev/null | head -n1 | awk '{print $1}')/node_modules/ecc-universal && \
+    if [[ -d "$ECC_DIR" ]]; then \
+        cd "$ECC_DIR" && npm install ajv 2>/dev/null || true; \
+    fi && \
+    # グローバル ajv もインストール（フォールバック）
+    npm install -g ajv 2>/dev/null || true
 
 # ===== ステージ3: ユーザー環境（統合版） =====
 FROM dev-tools AS final

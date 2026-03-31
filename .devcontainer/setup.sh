@@ -62,7 +62,25 @@ fi
 # ECC の設定適用
 echo "   ECC設定を適用中..."
 mkdir -p ~/.opencode
-ecc install --target opencode --profile ${ECC_PROFILE:-developer} || true
+
+# ajv 依存関係エラー修正（既知の問題）
+echo "   🔧 ajv 依存関係修正中..."
+ECC_PATH=$(npm list -g ecc-universal 2>/dev/null | head -n1 | awk '{print $1}' || echo "")
+if [[ -n "$ECC_PATH" ]] && [[ -d "$ECC_PATH/node_modules/ecc-universal" ]]; then
+    cd "$ECC_PATH/node_modules/ecc-universal"
+    echo "     ECCディレクトリ: $(pwd)"
+    npm install ajv 2>/dev/null || echo "     ajv インストール試行"
+    cd - > /dev/null
+fi
+
+# ECC設定適用（ajv修正後）
+ecc install --target opencode --profile ${ECC_PROFILE:-developer} || {
+    echo "   ⚠️  ECC初回インストール失敗 - 依存関係修正後再試行"
+    # グローバル ajv インストール（フォールバック）
+    npm install -g ajv 2>/dev/null || true
+    # 再試行
+    ecc install --target opencode --profile ${ECC_PROFILE:-developer} || echo "   ℹ️  ECCは後で手動設定できます"
+}
 
 # OpenCode設定ファイルの作成
 echo "📝 OpenCode設定ファイル作成..."
