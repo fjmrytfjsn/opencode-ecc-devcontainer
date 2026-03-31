@@ -55,15 +55,24 @@ code .
 
 ### ⚡ **対話式プロジェクト初期化**
 
-初回起動時、自動的に対話式セットアップが開始されます：
+DevContainer起動後、ターミナルで対話式セットアップを実行してください：
 
+```bash
+# 🎯 対話式プロジェクト初期化実行
+./.devcontainer/interactive-setup.sh
+
+# または
+bash .devcontainer/interactive-setup.sh
+```
+
+**セットアップフロー**:
 ```bash
 # 🎯 プロジェクト情報入力
 プロジェクト名: my-ai-assistant
 説明: AIアシスタント開発プロジェクト  
 作者名: Developer
 
-# 🔐 セキュリティ設定
+# 🔐 セキュリティ設定（オプション）
 Tailscale Auth Key: tskey-auth-xxxxxxxxxx
 ホスト名: my-ai-assistant-dev
 
