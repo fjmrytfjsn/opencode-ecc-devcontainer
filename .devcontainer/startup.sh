@@ -3,6 +3,18 @@ set -e
 
 echo "🌟 OpenCode ECC DevContainer 起動中..."
 
+# Fix hostname resolution first
+fix_hostname() {
+    HOSTNAME=$(hostname)
+    if ! grep -q "127.0.0.1.*$HOSTNAME" /etc/hosts 2>/dev/null; then
+        echo "🔧 ホスト名解決問題を修正中..."
+        echo "127.0.0.1 $HOSTNAME" | sudo tee -a /etc/hosts >/dev/null
+        echo "✅ ホスト名解決修正完了: $HOSTNAME"
+    fi
+}
+
+fix_hostname
+
 # 環境変数の読み込み
 if [ -f "/workspace/.env" ]; then
     echo "📂 .env ファイルから環境変数読み込み..."
@@ -38,10 +50,32 @@ fi
 if [ "$AUTH_KEY_VALID" = "true" ]; then
     echo "🔗 Tailscale設定検出 - リモートアクセス有効モードで起動"
     
-    # Tailscale 認証・起動
+    # Tailscaled daemon setup with proper initialization
     echo "   Tailscaled サービス開始..."
-    sudo tailscaled --state-dir=/var/lib/tailscale --socket=/run/tailscale/tailscaled.sock &
-    sleep 3
+    
+    # Ensure Tailscale directories exist
+    sudo mkdir -p /var/lib/tailscale
+    sudo mkdir -p /run/tailscale
+    
+    # Stop any existing tailscaled process
+    sudo pkill -f tailscaled || true
+    sleep 1
+    
+    # Start tailscaled in userspace mode for containers
+    sudo tailscaled \
+        --state-dir=/var/lib/tailscale \
+        --socket=/run/tailscale/tailscaled.sock \
+        --tun=userspace-networking \
+        --socks5-server=localhost:1055 &
+    
+    # Wait for daemon to be ready
+    for i in {1..10}; do
+        if sudo tailscale status >/dev/null 2>&1; then
+            break
+        fi
+        echo "   ⏳ Tailscale デーモン起動待機中... ($i/10)"
+        sleep 2
+    done
     
     echo "   Tailscale認証中..."
     if sudo tailscale up --auth-key="$TAILSCALE_AUTH_KEY" --hostname="${TAILSCALE_HOSTNAME:-opencode-dev}" --accept-routes; then

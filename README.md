@@ -388,6 +388,7 @@ DevContainer に自動インストールされる拡張機能:
 ## 🐛 トラブルシューティング
 
 ### ❌ **ECC ajv エラー**
+
 ```
 Error: Cannot find module 'ajv'
 ```
@@ -407,6 +408,7 @@ npm install  # 全依存関係再インストール
 ```
 
 ### ❌ **ECC 権限エラー**
+
 ```
 Error: EACCES: permission denied, mkdir '/home/vscode/.opencode/.agents/skills/api-design'
 ```
@@ -423,6 +425,31 @@ sudo chown -R vscode:vscode /home/vscode/.opencode
 chmod -R 755 /home/vscode/.opencode
 chmod -R u+w /home/vscode/.opencode
 ```
+
+### ❌ **DevContainer 起動エラー**
+
+``
+sudo: unable to resolve host opencode-dev: Name or service not known
+failed to connect to local tailscaled; it doesn't appear to be running
+
+````
+
+**原因**: ホスト名未登録 + Tailscaleデーモン未起動
+**解決方法**:
+
+```bash
+# 🔍 包括的診断実行
+./scripts/diagnose-devcontainer.sh
+
+# 🔧 自動修正（startup.shに組み込み済み）
+# - ホスト名自動登録
+# - Tailscaleデーモン適切な起動
+# - エラーハンドリング強化
+
+# または手動修正
+echo "127.0.0.1 $(hostname)" | sudo tee -a /etc/hosts
+sudo tailscaled --tun=userspace-networking --socks5-server=localhost:1055 &
+````
 
 ### ❌ **DevContainer ビルド失敗**
 
