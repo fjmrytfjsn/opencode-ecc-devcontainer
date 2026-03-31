@@ -1,9 +1,6 @@
 {
   "name": "OpenCode ECC + OpenChamber + Tailscale",
-  "dockerComposeFile": "docker-compose.yml",
-  "service": "opencode-dev",
-  "workspaceFolder": "/workspace",
-  "shutdownAction": "stopCompose",
+  "image": "mcr.microsoft.com/devcontainers/base:ubuntu",
   "features": {
     "ghcr.io/devcontainers/features/common-utils:2": {
       "installZsh": true,
@@ -26,6 +23,12 @@
     "ghcr.io/devcontainers/features/git:1": {
       "ppa": true,
       "version": "latest"
+    },
+    "ghcr.io/devcontainers/features/python:1": {
+      "version": "3.11"
+    },
+    "ghcr.io/devcontainers/features/github-cli:1": {
+      "installDirectlyFromGitHubRelease": true
     }
   },
   "customizations": {
@@ -44,7 +47,11 @@
       ],
       "settings": {
         "terminal.integrated.defaultProfile.linux": "zsh",
-        "python.defaultInterpreterPath": "/usr/local/python/current/bin/python"
+        "python.defaultInterpreterPath": "/usr/local/python/current/bin/python",
+        "files.watcherExclude": {
+          "**/node_modules/**": true,
+          "**/.opencode/**": true
+        }
       }
     }
   },
@@ -67,11 +74,24 @@
       "protocol": "http"
     }
   },
-  "postCreateCommand": ".devcontainer/setup.sh",
-  "postStartCommand": ".devcontainer/startup.sh",
-  "postAttachCommand": {
-    "welcome": "echo '🚀 OpenCode ECC DevContainer へようこそ！' && echo '' && echo '📋 次のステップ:' && echo '  1️⃣ .env.template を .env にコピー' && echo '  2️⃣ 必要に応じて .env を編集' && echo '  3️⃣ 初回プロジェクト設定: ./.devcontainer/interactive-setup.sh' && echo '' && echo '🎨 サービスURL:' && echo '  📍 OpenChamber: http://localhost:3000' && echo '  🤖 OpenCode CLI: http://localhost:4095' && echo '  📊 ダッシュボード: http://localhost:8080'"
+  "postCreateCommand": ".devcontainer/setup-simple.sh",
+  "postAttachCommand": ".devcontainer/startup-simple.sh",
+  "containerEnv": {
+    "OPENCODE_AUTO_START": "true",
+    "OPENCODE_VERSION": "1.3.9",
+    "OPENCODE_STARTUP_TIMEOUT_SECONDS": "60",
+    "OPENCODE_HOST": "0.0.0.0",
+    "OPENCODE_PORT": "4095",
+    "OPENCHAMBER_HOST": "0.0.0.0",
+    "OPENCHAMBER_PORT": "3000",
+    "ECC_PROFILE": "developer",
+    "TAILSCALE_HOSTNAME": "opencode-dev",
+    "NODE_ENV": "development"
   },
+  "runArgs": [
+    "--cap-add=NET_ADMIN",
+    "--device=/dev/net/tun"
+  ],
   "remoteUser": "vscode",
   "mounts": [
     "source=opencode-data,target=/home/vscode/.opencode,type=volume",
