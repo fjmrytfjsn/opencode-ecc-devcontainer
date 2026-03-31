@@ -1,0 +1,48 @@
+# 環境固有ファイル
+.env
+.env.local
+.env.*.local
+
+# IDEファイル
+.vscode/settings.json
+.vscode/launch.json
+.vscode/tasks.json
+.idea/
+
+# OS生成ファイル
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# ログファイル
+*.log
+logs/
+
+# 依存関係
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# 一時ファイル
+tmp/
+temp/
+*.tmp
+*.temp
+
+# Docker関連
+.docker/
+
+# Tailscale状態（セキュリティ）
+*.key
+*.pem
+tailscale.state
+
+# 開発用データベース
+*.sqlite
+*.sqlite3
+*.db

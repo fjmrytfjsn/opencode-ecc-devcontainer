@@ -1,0 +1,47 @@
+# Docker ビルドコンテキスト最適化
+# 不要ファイルを除外してビルド時間短縮
+
+# Git 関連
+.git
+.gitignore
+*.md
+!README.md
+
+# Node.js
+node_modules
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.npm
+.yarn
+
+# 環境・設定ファイル
+.env
+.env.local
+.env.*.local
+
+# IDE
+.vscode/settings.json
+.vscode/launch.json
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# 一時ファイル
+*.tmp
+*.temp
+*.log
+
+# テスト・ビルド成果物
+coverage/
+build/
+dist/
+*.tgz
+
+# キャッシュ
+.cache
+.parcel-cache

@@ -1,0 +1,83 @@
+{
+  "name": "OpenCode ECC + OpenChamber + Tailscale",
+  "dockerComposeFile": "docker-compose.yml",
+  "service": "opencode-dev",
+  "workspaceFolder": "/workspace",
+  "shutdownAction": "stopCompose",
+  "features": {
+    "ghcr.io/devcontainers/features/common-utils:2": {
+      "installZsh": true,
+      "configureZshAsDefaultShell": true,
+      "installOhMyZsh": true,
+      "upgradePackages": true,
+      "username": "vscode",
+      "userUid": "automatic",
+      "userGid": "automatic"
+    },
+    "ghcr.io/devcontainers/features/node:1": {
+      "nodeGypDependencies": true,
+      "version": "22",
+      "nvmVersion": "latest"
+    },
+    "ghcr.io/devcontainers/features/docker-in-docker:2": {
+      "version": "latest",
+      "enableNonRootDocker": "true"
+    },
+    "ghcr.io/devcontainers/features/git:1": {
+      "ppa": true,
+      "version": "latest"
+    }
+  },
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "ms-vscode.vscode-typescript-next",
+        "ms-vscode.vscode-json",
+        "ms-python.python",
+        "ms-python.debugpy",
+        "github.copilot",
+        "github.copilot-chat",
+        "github.vscode-github-actions",
+        "ms-vscode-remote.remote-containers",
+        "redhat.vscode-yaml",
+        "ms-vscode.makefile-tools"
+      ],
+      "settings": {
+        "terminal.integrated.defaultProfile.linux": "zsh",
+        "python.defaultInterpreterPath": "/usr/local/python/current/bin/python"
+      }
+    }
+  },
+  "forwardPorts": [
+    3000,
+    4095,
+    8080
+  ],
+  "portsAttributes": {
+    "3000": {
+      "label": "OpenChamber Web UI",
+      "protocol": "http"
+    },
+    "4095": {
+      "label": "OpenCode CLI Server",
+      "protocol": "http"
+    },
+    "8080": {
+      "label": "Development Server",
+      "protocol": "http"
+    }
+  },
+  "postCreateCommand": ".devcontainer/setup.sh",
+  "postStartCommand": ".devcontainer/startup.sh",
+  "onCreateCommand": {
+    "interactive-setup": ".devcontainer/interactive-setup.sh"
+  },
+  "postAttachCommand": {
+    "welcome": "echo '🚀 OpenCode ECC DevContainer へようこそ！' && echo '📍 プロジェクト: '$(grep PROJECT_NAME .env 2>/dev/null | cut -d= -f2 | tr -d '\"' || echo 'セットアップ待ち') && echo '🎨 OpenChamber: http://localhost:3000' && echo '🤖 OpenCode CLI: http://localhost:4095'"
+  },
+  "remoteUser": "vscode",
+  "mounts": [
+    "source=opencode-data,target=/home/vscode/.opencode,type=volume",
+    "source=tailscale-state,target=/var/lib/tailscale,type=volume"
+  ]
+}
