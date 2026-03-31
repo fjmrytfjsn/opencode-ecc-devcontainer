@@ -45,7 +45,7 @@ FROM system-base AS dev-tools
 ENV npm_config_cache=/tmp/npm-cache
 RUN --mount=type=cache,target=/tmp/npm-cache \
     # 並列npm install（依存関係なし）
-    npm install -g --prefer-offline @opencode-ai/cli & \
+    npm install -g --prefer-offline opencode-ai & \
     npm install -g --prefer-offline @openchamber/web & \
     npm install -g --prefer-offline ecc-universal & \
     # 並列処理完了待ち
@@ -54,9 +54,11 @@ RUN --mount=type=cache,target=/tmp/npm-cache \
 # ===== ステージ3: ユーザー環境（統合版） =====
 FROM dev-tools AS final
 
-# VSCode ユーザー作成（1回のみ）
-RUN useradd -m -s /bin/bash vscode && \
-    usermod -aG sudo vscode && \
+# VSCode ユーザー作成（条件付き - DevContainer対応）
+RUN if ! id "vscode" &>/dev/null; then \
+        useradd -m -s /bin/bash vscode; \
+    fi && \
+    usermod -aG sudo vscode 2>/dev/null || true && \
     echo "vscode ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers && \
     # 必要ディレクトリ作成
     mkdir -p /home/vscode/{.opencode,.config,workspace} && \
