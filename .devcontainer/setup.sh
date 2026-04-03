@@ -1,37 +1,41 @@
 #!/bin/bash
 set -e
 
-echo "🚀 OpenCode ECC DevContainer セットアップ開始..."
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "$SCRIPT_DIR/lib/common.sh"
+set -e
+
+echo "🚀 OpenCode ECC DevContainer 基盤セットアップ開始..."
 
 # 1. 環境変数検証（セキュリティチェック）
 echo "🔐 環境変数セキュリティチェック実行中..."
 /workspace/.devcontainer/env-validator.sh
 
-# 2. 対話式セットアップチェック
+# 2. 基盤セットアップチェック
 SETUP_COMPLETE_FILE="/workspace/.devcontainer/.setup-complete"
 if [[ ! -f "$SETUP_COMPLETE_FILE" ]]; then
     echo ""
     echo "🎯 初回セットアップが未完了です"
-    echo "💡 対話式セットアップを実行して、プロジェクトを初期化することを推奨します"
+    echo "💡 Tailscale中心の基盤セットアップを実行することを推奨します"
     echo ""
-    echo -e "\033[0;36m対話式セットアップを実行しますか？ (Y/n): \033[0m"
+    echo -e "\033[0;36m基盤セットアップを実行しますか？ (Y/n): \033[0m"
     read -r RUN_INTERACTIVE
     
     if [[ ! "$RUN_INTERACTIVE" =~ ^[Nn]$ ]]; then
-        echo "🚀 対話式セットアップを開始します..."
-        /workspace/.devcontainer/interactive-setup.sh
+        echo "🚀 基盤セットアップを開始します..."
+        SKIP_EXISTING_KEY_UPDATE_PROMPT=1 /workspace/.devcontainer/interactive-setup.sh
     else
-        echo "⚠️  対話式セットアップをスキップしました"
+        echo "⚠️  基盤セットアップをスキップしました"
         echo "   後で手動実行する場合: .devcontainer/interactive-setup.sh"
     fi
 else
-    echo "✅ プロジェクトは既に初期化済みです"
+    echo "✅ 基盤セットアップは既に完了済みです"
 fi
 
 # 環境変数の読み込み
 if [ -f "/workspace/.env" ]; then
     echo "📂 .env ファイルを読み込み中..."
-    export $(grep -v '^#' /workspace/.env | xargs) 2>/dev/null || true
+    load_env_file "/workspace/.env"
 fi
 
 # OpenCode CLI の確認・インストール
@@ -104,17 +108,9 @@ cat > ~/.opencode/opencode.json << 'EOF'
 }
 EOF
 
-# npm依存関係インストール（プロジェクトがpackage.jsonを持つ場合）
-if [[ -f "/workspace/package.json" ]]; then
-    echo "📦 プロジェクト依存関係をインストール中..."
-    cd /workspace
-    npm install
-    echo "✅ 依存関係のインストール完了"
-fi
-
 echo "✅ セットアップ完了！"
 echo ""
 echo "📱 次のステップ:"
-echo "1. ./scripts/start-services.sh でサービス起動" 
+echo "1. 必要なら .devcontainer/interactive-setup.sh でTailscale設定" 
 echo "2. http://localhost:3000 でOpenChamberにアクセス"
-echo "3. AIエージェントでプロジェクト開発開始！"
+echo "3. OpenCode API: http://localhost:4095"
