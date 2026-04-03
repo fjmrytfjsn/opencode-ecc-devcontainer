@@ -8,6 +8,12 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "$SCRIPT_DIR/lib/common.sh"
 set -e
 
+if [[ -d "/workspace/.devcontainer" ]]; then
+    WORKSPACE_ROOT="/workspace"
+else
+    WORKSPACE_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
+fi
+
 # カラー定義
 RED='\033[0;31m'
 GREEN='\033[0;32m'
@@ -49,24 +55,28 @@ if ! is_valid_tailscale_key "$TAILSCALE_AUTH_KEY"; then
     echo "  3. 'Reusable' と 'Ephemeral' をチェック"
     echo "  4. 生成されたキーを .env ファイルに設定"
     echo ""
-    echo -e "${CYAN}今すぐ設定しますか？ (y/N): ${NC}"
-    read -r SET_AUTH_KEY
-    
-    if [[ "$SET_AUTH_KEY" =~ ^[Yy]$ ]]; then
-        echo -e "${CYAN}Tailscale Auth Key を入力してください:${NC}"
-        read -s -p "🔑 Auth Key: " NEW_AUTH_KEY
-        echo ""
-        
-        if is_valid_tailscale_key "$NEW_AUTH_KEY"; then
-            # .env ファイル更新
-            upsert_env_value "$ENV_FILE" "TAILSCALE_AUTH_KEY" "$NEW_AUTH_KEY"
-            echo -e "${GREEN}✅ Tailscale Auth Key を設定しました${NC}"
-            TAILSCALE_AUTH_KEY="$NEW_AUTH_KEY"
-        else
-            echo -e "${YELLOW}⚠️  無効なAuth Keyです。後で手動で設定してください${NC}"
-        fi
+    if is_ci_mode; then
+        echo -e "${YELLOW}ℹ️  CIモードのため対話入力をスキップします${NC}"
     else
-        echo -e "${YELLOW}⚠️  後で手動で設定してください${NC}"
+        echo -e "${CYAN}今すぐ設定しますか？ (y/N): ${NC}"
+        read -r SET_AUTH_KEY
+
+        if [[ "$SET_AUTH_KEY" =~ ^[Yy]$ ]]; then
+            echo -e "${CYAN}Tailscale Auth Key を入力してください:${NC}"
+            read -s -p "🔑 Auth Key: " NEW_AUTH_KEY
+            echo ""
+
+            if is_valid_tailscale_key "$NEW_AUTH_KEY"; then
+                # .env ファイル更新
+                upsert_env_value "$ENV_FILE" "TAILSCALE_AUTH_KEY" "$NEW_AUTH_KEY"
+                echo -e "${GREEN}✅ Tailscale Auth Key を設定しました${NC}"
+                TAILSCALE_AUTH_KEY="$NEW_AUTH_KEY"
+            else
+                echo -e "${YELLOW}⚠️  無効なAuth Keyです。後で手動で設定してください${NC}"
+            fi
+        else
+            echo -e "${YELLOW}⚠️  後で手動で設定してください${NC}"
+        fi
     fi
 fi
 
@@ -115,19 +125,19 @@ ensure_env_permissions "$ENV_FILE"
 echo -e "${GREEN}✅ .env ファイル権限: 600 (所有者のみ読み書き)${NC}"
 
 # スクリプトファイルの実行権限
-SCRIPTS_DIR="/workspace/scripts"
+SCRIPTS_DIR="$WORKSPACE_ROOT/scripts"
 if [[ -d "$SCRIPTS_DIR" ]]; then
     find "$SCRIPTS_DIR" -name "*.sh" -exec chmod +x {} \;
     echo -e "${GREEN}✅ スクリプト実行権限を設定しました${NC}"
 fi
 
 # Git セキュリティチェック
-if [[ -f "/workspace/.gitignore" ]]; then
-    if grep -q "\.env" "/workspace/.gitignore"; then
+if [[ -f "$WORKSPACE_ROOT/.gitignore" ]]; then
+    if grep -q "\.env" "$WORKSPACE_ROOT/.gitignore"; then
         echo -e "${GREEN}✅ .env ファイルがGit管理対象外に設定済み${NC}"
     else
         echo -e "${YELLOW}⚠️  .env ファイルをGit管理対象外に追加します${NC}"
-        echo ".env" >> "/workspace/.gitignore"
+        echo ".env" >> "$WORKSPACE_ROOT/.gitignore"
         echo -e "${GREEN}✅ .gitignore に .env を追加しました${NC}"
     fi
 fi

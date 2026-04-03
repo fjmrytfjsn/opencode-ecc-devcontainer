@@ -5,37 +5,48 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "$SCRIPT_DIR/lib/common.sh"
 set -e
 
+if [[ -d "/workspace/.devcontainer" ]]; then
+    WORKSPACE_ROOT="/workspace"
+else
+    WORKSPACE_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
+fi
+
 echo "🚀 OpenCode ECC DevContainer 基盤セットアップ開始..."
 
 # 1. 環境変数検証（セキュリティチェック）
 echo "🔐 環境変数セキュリティチェック実行中..."
-/workspace/.devcontainer/env-validator.sh
+"$SCRIPT_DIR/env-validator.sh"
 
 # 2. 基盤セットアップチェック
-SETUP_COMPLETE_FILE="/workspace/.devcontainer/.setup-complete"
+SETUP_COMPLETE_FILE="$WORKSPACE_ROOT/.devcontainer/.setup-complete"
 if [[ ! -f "$SETUP_COMPLETE_FILE" ]]; then
-    echo ""
-    echo "🎯 初回セットアップが未完了です"
-    echo "💡 Tailscale中心の基盤セットアップを実行することを推奨します"
-    echo ""
-    echo -e "\033[0;36m基盤セットアップを実行しますか？ (Y/n): \033[0m"
-    read -r RUN_INTERACTIVE
-    
-    if [[ ! "$RUN_INTERACTIVE" =~ ^[Nn]$ ]]; then
-        echo "🚀 基盤セットアップを開始します..."
-        SKIP_EXISTING_KEY_UPDATE_PROMPT=1 /workspace/.devcontainer/interactive-setup.sh
+    if is_ci_mode; then
+        echo "ℹ️  CIモードのため対話セットアップをスキップします"
+        touch "$SETUP_COMPLETE_FILE"
     else
-        echo "⚠️  基盤セットアップをスキップしました"
-        echo "   後で手動実行する場合: .devcontainer/interactive-setup.sh"
+        echo ""
+        echo "🎯 初回セットアップが未完了です"
+        echo "💡 Tailscale中心の基盤セットアップを実行することを推奨します"
+        echo ""
+        echo -e "\033[0;36m基盤セットアップを実行しますか？ (Y/n): \033[0m"
+        read -r RUN_INTERACTIVE
+
+        if [[ ! "$RUN_INTERACTIVE" =~ ^[Nn]$ ]]; then
+            echo "🚀 基盤セットアップを開始します..."
+            SKIP_EXISTING_KEY_UPDATE_PROMPT=1 "$SCRIPT_DIR/interactive-setup.sh"
+        else
+            echo "⚠️  基盤セットアップをスキップしました"
+            echo "   後で手動実行する場合: .devcontainer/interactive-setup.sh"
+        fi
     fi
 else
     echo "✅ 基盤セットアップは既に完了済みです"
 fi
 
 # 環境変数の読み込み
-if [ -f "/workspace/.env" ]; then
+if [ -f "$WORKSPACE_ROOT/.env" ]; then
     echo "📂 .env ファイルを読み込み中..."
-    load_env_file "/workspace/.env"
+    load_env_file "$WORKSPACE_ROOT/.env"
 fi
 
 # OpenCode CLI の確認・インストール

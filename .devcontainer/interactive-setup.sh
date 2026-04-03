@@ -7,8 +7,27 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "$SCRIPT_DIR/lib/common.sh"
 set -e
 
-SETUP_COMPLETE_FILE="/workspace/.devcontainer/.setup-complete"
+if [[ -d "/workspace/.devcontainer" ]]; then
+    WORKSPACE_ROOT="/workspace"
+else
+    WORKSPACE_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
+fi
+
+SETUP_COMPLETE_FILE="$WORKSPACE_ROOT/.devcontainer/.setup-complete"
 ENV_FILE=$(resolve_env_file)
+
+if is_ci_mode; then
+    log_info "ℹ️  CIモードのためインタラクティブセットアップをスキップします"
+    if [[ ! -f "$ENV_FILE" ]]; then
+        ENV_TEMPLATE=$(resolve_env_template_file)
+        if [[ -f "$ENV_TEMPLATE" ]]; then
+            cp "$ENV_TEMPLATE" "$ENV_FILE"
+        fi
+    fi
+    ensure_env_permissions "$ENV_FILE"
+    touch "$SETUP_COMPLETE_FILE"
+    exit 0
+fi
 
 log_success "🚀 基盤セットアップへようこそ"
 log_info "このセットアップは Tailscale 関連設定のみを扱います。"

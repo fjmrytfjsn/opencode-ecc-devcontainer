@@ -104,3 +104,11 @@ ensure_hosts_entry() {
         sudo sh -c "echo '127.0.0.1 $host_name' >> /etc/hosts" 2>/dev/null || true
     fi
 }
+
+is_ci_mode() {
+    [[ "${CI_MODE:-0}" == "1" ]] && return 0
+    [[ "${CI:-false}" == "true" ]] && return 0
+    [[ "${GITHUB_ACTIONS:-false}" == "true" ]] && return 0
+    [[ ! -t 0 ]] && return 0
+    return 1
+}
