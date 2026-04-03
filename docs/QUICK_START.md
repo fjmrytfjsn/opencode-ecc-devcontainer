@@ -1,90 +1,44 @@
-# 🚀 OpenCode ECC DevContainer - セットアップガイド
+# QUICK START
 
-## 📋 前提条件
+## 目的
 
-- Docker Desktop インストール済み
-- VS Code + Dev Containers 拡張機能
-- Tailscale アカウント
+このリポジトリを OpenCode / OpenChamber / Tailscale の基盤環境として起動します。
 
-## 🔧 ステップ・バイ・ステップ セットアップ
+## 手順
 
-### Step 1: リポジトリのクローン
+1. リポジトリをクローン
 
 ```bash
-git clone https://github.com/YOUR_USERNAME/opencode-ecc-devcontainer.git
+git clone https://github.com/<your-account>/opencode-ecc-devcontainer.git
 cd opencode-ecc-devcontainer
 ```
 
-### Step 2: Tailscale Auth Key の取得
+2. `.env` を作成
 
-1. **Tailscale Admin Console** にアクセス:  
-   https://login.tailscale.com/admin/settings/keys
-
-2. **「Generate auth key」** をクリック
-
-3. **設定をチェック**:
-   - ✅ **Reusable** (再利用可能)
-   - ✅ **Ephemeral** (一時的)
-   - ⏰ **Expiry**: 90日 (推奨)
-
-4. **「Generate key」** をクリック
-
-5. **Auth Key をコピー**（例: `tskey-auth-k123456789abcdef...`）
-
-### Step 3: 環境設定ファイル作成
-
-```bash
-# テンプレートをコピー
-cp .env.template .env
-
-# .env ファイルを編集
-nano .env
-```
-
-**⚠️ 重要**: この手順を忘れるとTailscale接続できません！
-
-**最小限の設定:**
-```bash
-TAILSCALE_AUTH_KEY=tskey-auth-k123456789abcdef
-```
-
-### Step 4: DevContainer 起動
-
-1. **VS Code でプロジェクトを開く:** `code .`
-
-2. **Command Palette:** `Ctrl+Shift+P`
-
-3. **コマンド実行:** `Dev Containers: Reopen in Container`
-
-4. **初回ビルド待機:** 5-10分
-
-### Step 5: スマートフォン接続
-
-1. **Tailscale アプリ** で同じアカウントにログイン
-
-2. **Container IP確認:**
-   ```bash
-   sudo tailscale ip -4
-   ```
-
-3. **ブラウザでアクセス:**
-   ```
-   http://[container-tailscale-ip]:3000
-   ```
-
-## 🐛 よくある問題
-
-### `.env ファイル未作成`
 ```bash
 cp .env.template .env
-nano .env  # TAILSCALE_AUTH_KEY を設定
 ```
 
-### `DevContainer ビルドエラー`
+3. 必要なら Tailscale 情報を設定
+
+- `TAILSCALE_AUTH_KEY`
+- `TAILSCALE_HOSTNAME`
+
+4. DevContainer を起動
+
+- VS Code: `Dev Containers: Reopen in Container`
+
+5. 任意で対話セットアップ
+
 ```bash
-# Command Palette → "Dev Containers: Rebuild Container"
+./.devcontainer/interactive-setup.sh
 ```
 
----
+## 確認
 
-**詳細は [完全セットアップガイド](SETUP_GUIDE.md) を参照**
+- OpenChamber: `http://localhost:3000`
+- OpenCode CLI Server: `http://localhost:4095`
+
+## 注意
+
+このリポジトリは基盤です。アプリ開発は別リポジトリで行ってください。
