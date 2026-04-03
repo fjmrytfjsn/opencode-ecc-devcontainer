@@ -94,5 +94,3 @@ RUN chmod +x /usr/local/bin/entrypoint.sh
 USER vscode
 ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]
 CMD ["sleep", "infinity"]
-# /etc/hosts にホスト名を追加
-RUN echo "127.0.0.1 $(hostname)" >> /etc/hosts
