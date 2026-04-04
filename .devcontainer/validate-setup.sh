@@ -57,7 +57,7 @@ if [[ -f "/workspace/.env" ]]; then
     if [[ -n "$TAILSCALE_AUTH_KEY" && "$TAILSCALE_AUTH_KEY" != "your-tailscale-auth-key-here" && "$TAILSCALE_AUTH_KEY" != "tskey-auth-xxxxxxxxxxxxxxxxx" ]]; then
         run_test "TAILSCALE_AUTH_KEY 設定確認" "test -n '$TAILSCALE_AUTH_KEY'"
     else
-        echo -e "${YELLOW}🔍 [${TESTS_TOTAL}+1] TAILSCALE_AUTH_KEY 設定確認 (オプション)${NC}"
+        echo -e "${YELLOW}🔍 [$((TESTS_TOTAL+1))] TAILSCALE_AUTH_KEY 設定確認 (オプション)${NC}"
         echo -e "${YELLOW}   ⚠️  SKIP（ローカルモード許容）${NC}"
     fi
     run_test "ECC_PROFILE 設定確認" "test -n '$ECC_PROFILE'"

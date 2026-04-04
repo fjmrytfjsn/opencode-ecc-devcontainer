@@ -62,7 +62,6 @@ if [ -f ".env" ]; then
     
     if [ -n "$TAILSCALE_AUTH_KEY" ] && [ "$TAILSCALE_AUTH_KEY" != "your-auth-key-here" ] && [ "$TAILSCALE_AUTH_KEY" != "tskey-auth-xxxxxxxxxxxxxxxxx" ]; then
         echo "  ✅ TAILSCALE_AUTH_KEY 設定済み"
-        echo "     キー: ${TAILSCALE_AUTH_KEY:0:15}..."
     else
         echo "  ⚠️  TAILSCALE_AUTH_KEY 未設定またはテンプレート値"
         echo "     設定コマンド: ./scripts/setup-tailscale.sh"

@@ -85,9 +85,9 @@ chmod -R 755 ~/.opencode 2>/dev/null || true
 
 # ajv 依存関係エラー修正（既知の問題）
 echo "   🔧 ajv 依存関係修正中..."
-ECC_PATH=$(npm list -g ecc-universal 2>/dev/null | head -n1 | awk '{print $1}' || echo "")
-if [[ -n "$ECC_PATH" ]] && [[ -d "$ECC_PATH/node_modules/ecc-universal" ]]; then
-    cd "$ECC_PATH/node_modules/ecc-universal"
+ECC_DIR="$(npm root -g 2>/dev/null)/ecc-universal"
+if [[ -d "$ECC_DIR" ]]; then
+    cd "$ECC_DIR"
     echo "     ECCディレクトリ: $(pwd)"
     npm install ajv 2>/dev/null || echo "     ajv インストール試行"
     cd - > /dev/null

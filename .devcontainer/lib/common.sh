@@ -53,10 +53,29 @@ resolve_env_template_file() {
 load_env_file() {
     local env_file="$1"
     [[ -f "$env_file" ]] || return 1
-    # shellcheck disable=SC1090
-    set -a
-    source "$env_file" 2>/dev/null || true
-    set +a
+
+    # Parse KEY=VALUE lines only to avoid executing arbitrary shell code.
+    local line key value
+    while IFS= read -r line || [[ -n "$line" ]]; do
+        line="${line%$'\r'}"
+        [[ -z "${line//[[:space:]]/}" ]] && continue
+        [[ "$line" =~ ^[[:space:]]*# ]] && continue
+
+        if [[ "$line" =~ ^[[:space:]]*([A-Za-z_][A-Za-z0-9_]*)[[:space:]]*=(.*)$ ]]; then
+            key="${BASH_REMATCH[1]}"
+            value="${BASH_REMATCH[2]}"
+            value=$(echo "$value" | sed -E 's/^[[:space:]]+|[[:space:]]+$//g')
+
+            if [[ "$value" =~ ^\"(.*)\"$ ]]; then
+                value="${BASH_REMATCH[1]}"
+            elif [[ "$value" =~ ^\'(.*)\'$ ]]; then
+                value="${BASH_REMATCH[1]}"
+            fi
+
+            export "$key=$value"
+        fi
+    done < "$env_file"
+
     return 0
 }
 

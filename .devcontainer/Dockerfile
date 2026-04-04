@@ -51,7 +51,7 @@ RUN --mount=type=cache,target=/tmp/npm-cache \
     # 並列処理完了待ち
     wait && \
     # ECC ajv依存関係修正（既知の問題対応）
-    ECC_DIR=$(npm list -g ecc-universal 2>/dev/null | head -n1 | awk '{print $1}')/node_modules/ecc-universal && \
+    ECC_DIR="$(npm root -g 2>/dev/null)/ecc-universal" && \
     if [ -d "$ECC_DIR" ]; then \
         cd "$ECC_DIR" && npm install ajv 2>/dev/null || true; \
     fi && \
