@@ -49,24 +49,33 @@ RUN --mount=type=cache,target=/tmp/npm-cache \
     npm install -g --prefer-offline @openchamber/web & \
     npm install -g --prefer-offline ecc-universal & \
     # 並列処理完了待ち
-    wait
+    wait && \
+    # ECC ajv依存関係修正（既知の問題対応）
+    ECC_DIR="$(npm root -g 2>/dev/null)/ecc-universal" && \
+    if [ -d "$ECC_DIR" ]; then \
+        cd "$ECC_DIR" && npm install ajv 2>/dev/null || true; \
+    fi && \
+    # グローバル ajv もインストール（フォールバック）
+    npm install -g ajv 2>/dev/null || true
 
 # ===== ステージ3: ユーザー環境（統合版） =====
 FROM dev-tools AS final
 
 # VSCode ユーザー作成（条件付き - DevContainer対応）
-RUN if ! id "vscode" &>/dev/null; then \
+RUN if ! id "vscode" >/dev/null 2>&1; then \
         useradd -m -s /bin/bash vscode; \
     fi && \
     usermod -aG sudo vscode 2>/dev/null || true && \
     echo "vscode ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers && \
-    # 必要ディレクトリ作成
+    # 必要ディレクトリ作成（権限エラー対策強化）
     mkdir -p /home/vscode/{.opencode,.config,workspace} && \
+    mkdir -p /home/vscode/.opencode/{.agents,.agents/skills} && \
     # 環境変数設定を .bashrc に追加
     echo 'export VOLTA_HOME="/opt/volta"' >> /home/vscode/.bashrc && \
     echo 'export PATH="/opt/volta/bin:/opt/cargo/bin:$PATH"' >> /home/vscode/.bashrc && \
-    # 権限設定（一括）
-    chown -R vscode:vscode /home/vscode
+    # 権限設定（一括・強化版）
+    chown -R vscode:vscode /home/vscode && \
+    chmod -R 755 /home/vscode/.opencode
 
 # ===== 最終設定（変更頻度高 -> 下位レイヤー） =====
 WORKDIR /workspace

@@ -2,11 +2,8 @@
 
 echo "🔧 OpenCode ECC DevContainer エントリーポイント"
 
-# Tailscale daemon 起動
-if [ -n "$TAILSCALE_AUTH_KEY" ]; then
-    echo "🌐 Tailscale daemon 起動中..."
-    sudo tailscaled --state-dir=/var/lib/tailscale --socket=/run/tailscale/tailscaled.sock &
-fi
+# tailscaled startup is centrally handled by .devcontainer/startup.sh
+# to keep daemon flags and lifecycle behavior consistent.
 
 # メインプロセス実行
 exec "$@"

@@ -1,5 +1,3 @@
-version: "3.8"
-
 services:
   opencode-dev:
     build:
@@ -8,8 +6,6 @@ services:
       # 🚀 ビルド最適化設定
       args:
         - BUILDKIT_INLINE_CACHE=1
-      cache_from:
-        - ghcr.io/opencode-ecc-devcontainer/cache:buildcache
       target: final
       # 並列ビルド有効化
       platforms:
@@ -54,8 +50,7 @@ services:
 
     # ヘルスチェック
     healthcheck:
-      test:
-        ["CMD", "curl", "-f", "http://localhost:3000/health", "||", "exit", "1"]
+      test: ["CMD-SHELL", "curl -fsS http://localhost:3000/health || exit 1"]
       interval: 30s
       timeout: 10s
       retries: 5

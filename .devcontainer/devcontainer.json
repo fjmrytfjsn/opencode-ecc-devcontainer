@@ -24,7 +24,7 @@
       "enableNonRootDocker": "true"
     },
     "ghcr.io/devcontainers/features/git:1": {
-      "ppa": true,
+      "ppa": false,
       "version": "latest"
     }
   },
@@ -50,8 +50,7 @@
   },
   "forwardPorts": [
     3000,
-    4095,
-    8080
+    4095
   ],
   "portsAttributes": {
     "3000": {
@@ -61,16 +60,12 @@
     "4095": {
       "label": "OpenCode CLI Server",
       "protocol": "http"
-    },
-    "8080": {
-      "label": "Development Server",
-      "protocol": "http"
     }
   },
   "postCreateCommand": ".devcontainer/setup.sh",
   "postStartCommand": ".devcontainer/startup.sh",
   "postAttachCommand": {
-    "welcome": "echo '🚀 OpenCode ECC DevContainer へようこそ！' && echo '' && echo '📋 次のステップ:' && echo '  1️⃣ .env.template を .env にコピー' && echo '  2️⃣ 必要に応じて .env を編集' && echo '  3️⃣ 初回プロジェクト設定: ./.devcontainer/interactive-setup.sh' && echo '' && echo '🎨 サービスURL:' && echo '  📍 OpenChamber: http://localhost:3000' && echo '  🤖 OpenCode CLI: http://localhost:4095' && echo '  📊 ダッシュボード: http://localhost:8080'"
+    "welcome": "echo '🚀 OpenCode ECC DevContainer へようこそ！' && echo '' && echo '📋 次のステップ:' && echo '  1️⃣ .env.template を .env にコピー' && echo '  2️⃣ 必要に応じて ./.devcontainer/interactive-setup.sh でTailscale設定' && echo '' && echo '🎨 サービスURL:' && echo '  📍 OpenChamber: http://localhost:3000' && echo '  🤖 OpenCode CLI: http://localhost:4095'"
   },
   "remoteUser": "vscode",
   "mounts": [

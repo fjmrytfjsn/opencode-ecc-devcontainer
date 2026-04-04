@@ -54,8 +54,12 @@ run_test ".env.template ファイル存在確認" "test -f /workspace/.env.templ
 
 if [[ -f "/workspace/.env" ]]; then
     source /workspace/.env 2>/dev/null || true
-    run_test "TAILSCALE_AUTH_KEY 設定確認" "test -n '$TAILSCALE_AUTH_KEY' && test '$TAILSCALE_AUTH_KEY' != 'your-tailscale-auth-key-here'"
-    run_test "PROJECT_NAME 設定確認" "test -n '$PROJECT_NAME'"
+    if [[ -n "$TAILSCALE_AUTH_KEY" && "$TAILSCALE_AUTH_KEY" != "your-tailscale-auth-key-here" && "$TAILSCALE_AUTH_KEY" != "tskey-auth-xxxxxxxxxxxxxxxxx" ]]; then
+        run_test "TAILSCALE_AUTH_KEY 設定確認" "test -n '$TAILSCALE_AUTH_KEY'"
+    else
+        echo -e "${YELLOW}🔍 [$((TESTS_TOTAL+1))] TAILSCALE_AUTH_KEY 設定確認 (オプション)${NC}"
+        echo -e "${YELLOW}   ⚠️  SKIP（ローカルモード許容）${NC}"
+    fi
     run_test "ECC_PROFILE 設定確認" "test -n '$ECC_PROFILE'"
 fi
 
@@ -93,11 +97,10 @@ if command -v ecc &>/dev/null; then
     run_test "ECC スキルリスト取得" "timeout 10 ecc skills list"
 fi
 
-# プロジェクト構造テスト
+# 基盤構造テスト
 echo ""
-echo -e "${BLUE}📁 プロジェクト構造テスト${NC}"
+echo -e "${BLUE}📁 基盤構造テスト${NC}"
 run_test "README.md 存在確認" "test -f /workspace/README.md"
-run_test "package.json 存在確認" "test -f /workspace/package.json"
 run_test "scripts ディレクトリ確認" "test -d /workspace/scripts"
 run_test "src ディレクトリ確認" "test -d /workspace/src"
 run_test "docs ディレクトリ確認" "test -d /workspace/docs"
@@ -125,7 +128,6 @@ check_port() {
 
 run_test "ポート 3000 (OpenChamber) 利用可能" "check_port 3000"
 run_test "ポート 4095 (OpenCode CLI) 利用可能" "check_port 4095"  
-run_test "ポート 8080 (開発サーバー) 利用可能" "check_port 8080"
 
 # ネットワーク接続テスト
 echo ""
@@ -165,12 +167,7 @@ echo ""
 echo -e "${BLUE}🔄 統合テスト（簡易）${NC}"
 
 if [[ -n "$TAILSCALE_AUTH_KEY" && "$TAILSCALE_AUTH_KEY" != "your-tailscale-auth-key-here" ]]; then
-    run_test "Tailscale 認証テスト" "timeout 10 tailscale up --auth-key='$TAILSCALE_AUTH_KEY' --reset"
-fi
-
-# package.json がある場合の依存関係テスト
-if [[ -f "/workspace/package.json" ]]; then
-    run_test "npm 依存関係チェック" "cd /workspace && npm ls --depth=0"
+    run_test "Tailscale 認証テスト" "timeout 10 tailscale --socket=/run/tailscale/tailscaled.sock up --auth-key='$TAILSCALE_AUTH_KEY' --reset"
 fi
 
 # テスト結果サマリー
@@ -209,12 +206,6 @@ if [[ $TESTS_FAILED -gt 0 ]]; then
     if ! command -v opencode &>/dev/null; then
         echo -e "${CYAN}🤖 OpenCode CLI:${NC}"
         echo "   npm install -g @opencode-ai/cli"
-        echo ""
-    fi
-    
-    if [[ ! -f "/workspace/package.json" ]]; then
-        echo -e "${CYAN}📦 プロジェクト初期化:${NC}"  
-        echo "   対話式セットアップを実行: .devcontainer/interactive-setup.sh"
         echo ""
     fi
     

@@ -1,191 +1,248 @@
 #!/bin/bash
 set -e
 
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "$SCRIPT_DIR/lib/common.sh"
+set -e
+
 echo "🌟 OpenCode ECC DevContainer 起動中..."
 
-# 環境変数の読み込み
-if [ -f "/workspace/.env" ]; then
-    echo "📂 .env ファイルから環境変数読み込み..."
-    export $(grep -v '^#' /workspace/.env | xargs) 2>/dev/null || true
-fi
-
-# ネットワーク情報の自動検出
-detect_network_info() {
-    # Docker内部IP取得
-    CONTAINER_IP=$(hostname -i 2>/dev/null | awk '{print $1}' || echo "未検出")
-    
-    # ホストのLAN IP推測（eth0から）
-    HOST_LAN_IP=$(ip route get 1.1.1.1 2>/dev/null | grep -oP 'src \K[^ ]+' || echo "未検出")
-    
-    # 利用可能ポート確認
-    OPENCODE_PORT=${OPENCODE_PORT:-4095}
-    OPENCHAMBER_PORT=${OPENCHAMBER_PORT:-3000}
-    SAMPLE_PORT=8080
-    
-    echo "🌐 ネットワーク情報自動検出完了"
-    echo "   コンテナIP: $CONTAINER_IP"
-    echo "   ホストLAN IP: $HOST_LAN_IP"
+fix_hostname() {
+    local current_host
+    current_host=$(hostname)
+    echo "🔧 ホスト名解決問題を修正中..."
+    ensure_hosts_entry "$current_host"
+    echo "✅ ホスト名解決修正完了: $current_host"
 }
 
-detect_network_info
+fix_hostname
 
-# Tailscale設定状況の確認と分岐
-AUTH_KEY_VALID=false
-if [ -n "$TAILSCALE_AUTH_KEY" ] && [ "$TAILSCALE_AUTH_KEY" != "tskey-auth-xxxxxxxxxxxxxxxxx" ] && [ "$TAILSCALE_AUTH_KEY" != "your-tailscale-auth-key-here" ]; then
-    AUTH_KEY_VALID=true
+if [ -f "/workspace/.env" ]; then
+    echo "📂 .env ファイルから環境変数読み込み..."
+    load_env_file "/workspace/.env"
 fi
 
-if [ "$AUTH_KEY_VALID" = "true" ]; then
-    echo "🔗 Tailscale設定検出 - リモートアクセス有効モードで起動"
-    
-    # Tailscale 認証・起動
-    echo "   Tailscaled サービス開始..."
-    sudo tailscaled --state-dir=/var/lib/tailscale --socket=/run/tailscale/tailscaled.sock &
-    sleep 3
-    
-    echo "   Tailscale認証中..."
-    if sudo tailscale up --auth-key="$TAILSCALE_AUTH_KEY" --hostname="${TAILSCALE_HOSTNAME:-opencode-dev}" --accept-routes; then
-        TAILSCALE_IP=$(sudo tailscale ip -4 2>/dev/null || echo "IP取得中...")
-        echo "   ✅ Tailscale接続完了"
-        echo "   📱 Tailscale IP: $TAILSCALE_IP"
-        REMOTE_ACCESS_MODE=true
+sanitize_opencode_agents() {
+    local agents_dir="/home/vscode/.opencode/.agents"
+    if [ ! -d "$agents_dir" ] && [ -d "/home/vscode/.opencode/agents" ]; then
+        agents_dir="/home/vscode/.opencode/agents"
+    fi
+    [ -d "$agents_dir" ] || return 0
+
+    local changed=0
+    for f in "$agents_dir"/*.md; do
+        [ -f "$f" ] || continue
+
+        local line tools_raw tools_obj
+        line=$(grep -m1 '^tools:\s*\[' "$f" || true)
+        if [ -n "$line" ]; then
+            tools_raw=$(echo "$line" | sed -E 's/^tools:\s*\[(.*)\]\s*$/\1/')
+            tools_obj=""
+
+            IFS=',' read -r -a arr <<< "$tools_raw"
+            for t in "${arr[@]}"; do
+                t=$(echo "$t" | sed -E 's/^\s*"(.*)"\s*$/\1/' | sed -E 's/^\s+|\s+$//g')
+                [ -n "$t" ] || continue
+                if [ -n "$tools_obj" ]; then
+                    tools_obj="$tools_obj, "
+                fi
+                tools_obj="$tools_obj\"$t\": true"
+            done
+
+            if [ -n "$tools_obj" ]; then
+                sed -i -E "s|^tools:\s*\[.*\]\s*$|tools: {$tools_obj}|" "$f"
+                changed=$((changed + 1))
+            fi
+        fi
+
+        local color_line color_value color_norm color_enum
+        color_line=$(grep -m1 '^color:\s*' "$f" || true)
+        if [ -n "$color_line" ]; then
+            color_value=$(echo "$color_line" | sed -E 's/^color:\s*//')
+            color_norm=$(echo "$color_value" | tr '[:upper:]' '[:lower:]' | tr -d '[:space:]')
+
+            if ! echo "$color_norm" | grep -Eq '^(primary|secondary|accent|success|warning|error|info)$'; then
+                case "$color_norm" in
+                    teal) color_enum="info" ;;
+                    orange) color_enum="warning" ;;
+                    red) color_enum="error" ;;
+                    green) color_enum="success" ;;
+                    blue|primary) color_enum="primary" ;;
+                    purple|accent) color_enum="accent" ;;
+                    secondary) color_enum="secondary" ;;
+                    success) color_enum="success" ;;
+                    warning) color_enum="warning" ;;
+                    error) color_enum="error" ;;
+                    info) color_enum="info" ;;
+                    *) color_enum="info" ;;
+                esac
+
+                sed -i -E "s|^color:\s*.*$|color: $color_enum|" "$f"
+                changed=$((changed + 1))
+            fi
+        fi
+    done
+
+    if [ "$changed" -gt 0 ]; then
+        echo "🛠️ opencode エージェント設定を自動修正しました: ${changed}件"
+    fi
+}
+
+sanitize_opencode_agents
+
+OPENCODE_PORT=${OPENCODE_PORT:-4095}
+OPENCHAMBER_PORT=${OPENCHAMBER_PORT:-3000}
+OPENCODE_HOST=${OPENCODE_HOST:-0.0.0.0}
+OPENCHAMBER_HOST=${OPENCHAMBER_HOST:-0.0.0.0}
+
+REMOTE_ACCESS_MODE=false
+TAILSCALE_IP=""
+
+start_tailscaled_daemon() {
+    local tailscaled_bin
+    tailscaled_bin=$(command -v tailscaled 2>/dev/null || true)
+    if [ -z "$tailscaled_bin" ]; then
+        echo "⚠️  tailscaled バイナリが見つかりません。Tailscaleはスキップします。"
+        return 1
+    fi
+
+    sudo mkdir -p /var/lib/tailscale /run/tailscale
+    sudo pkill -f tailscaled || true
+    sleep 1
+
+    # Start daemon in background and capture logs for troubleshooting.
+    sudo nohup "$tailscaled_bin" \
+        --statedir=/var/lib/tailscale \
+        --socket=/run/tailscale/tailscaled.sock \
+        --tun=userspace-networking \
+        --socks5-server=localhost:1055 >/tmp/tailscaled.log 2>&1 < /dev/null &
+
+    for i in {1..15}; do
+        if sudo tailscale --socket=/run/tailscale/tailscaled.sock status >/dev/null 2>&1; then
+            return 0
+        fi
+        echo "   ⏳ tailscaled 起動待機中... ($i/15)"
+        sleep 1
+    done
+
+    echo "⚠️  tailscaled の起動確認に失敗しました。"
+    [ -f /tmp/tailscaled.log ] && tail -n 30 /tmp/tailscaled.log || true
+    return 1
+}
+
+if is_valid_tailscale_key "$TAILSCALE_AUTH_KEY"; then
+    echo "🔗 Tailscale 設定を検出。接続を試行します..."
+    if start_tailscaled_daemon; then
+        if sudo tailscale --socket=/run/tailscale/tailscaled.sock up --auth-key="$TAILSCALE_AUTH_KEY" --hostname="${TAILSCALE_HOSTNAME:-opencode-dev}" --accept-routes; then
+            TAILSCALE_IP=$(sudo tailscale --socket=/run/tailscale/tailscaled.sock ip -4 2>/dev/null || true)
+            REMOTE_ACCESS_MODE=true
+            echo "✅ Tailscale 接続完了: ${TAILSCALE_IP:-IP未取得}"
+        else
+            echo "⚠️  tailscale up が失敗しました。ローカルモードで継続します。"
+            sudo tailscale --socket=/run/tailscale/tailscaled.sock status 2>/dev/null || true
+        fi
     else
-        echo "   ❌ Tailscale接続失敗 - ローカルモードに切り替え"
-        REMOTE_ACCESS_MODE=false
+        echo "⚠️  tailscaled の起動に失敗しました。ローカルモードで継続します。"
     fi
 else
-    echo "🏠 ローカル開発モードで起動（Tailscale無し）"
-    echo "   💡 後でTailscaleを有効にする場合："
-    echo "     1. .env ファイルを編集してTAILSCALE_AUTH_KEYを設定"
-    echo "     2. ./scripts/setup-tailscale.sh を実行"
-    REMOTE_ACCESS_MODE=false
+    echo "ℹ️  有効な TAILSCALE_AUTH_KEY が未設定です。ローカルモードで起動します。"
+    echo "   後で設定する場合は .devcontainer/interactive-setup.sh を実行してください。"
 fi
 
 echo ""
-echo "🚀 サービス起動中..."
+echo "🚀 基盤サービス起動中..."
 
-# OpenCode CLI サーバー起動
-echo "📍 OpenCode CLI サーバー起動..."
-cd /workspace
-opencode serve --port $OPENCODE_PORT --host ${OPENCODE_HOST:-0.0.0.0} &
+OPENCODE_LOG=/tmp/opencode-serve.log
+OPENCHAMBER_LOG=/tmp/openchamber.log
+
+nohup opencode serve --port "$OPENCODE_PORT" --hostname "$OPENCODE_HOST" > "$OPENCODE_LOG" 2>&1 < /dev/null &
 OPENCODE_PID=$!
 
-# 起動待機
-sleep 3
+sleep 2
 
-# OpenChamber 起動
-echo "📍 OpenChamber Web UI 起動..."
 OPENCODE_HOST=http://localhost:$OPENCODE_PORT \
 OPENCODE_SKIP_START=true \
-openchamber \
-    --port $OPENCHAMBER_PORT \
-    --host ${OPENCHAMBER_HOST:-0.0.0.0} &
+nohup openchamber --port "$OPENCHAMBER_PORT" --host "$OPENCHAMBER_HOST" > "$OPENCHAMBER_LOG" 2>&1 < /dev/null &
 OPENCHAMBER_PID=$!
 
-# プロジェクトアプリ起動（package.jsonがある場合）
-if [ -f "/workspace/package.json" ]; then
-    echo "📍 プロジェクトアプリ起動..."
-    cd /workspace
-    # 依存関係が未インストールの場合はインストール
-    if [ ! -d "node_modules" ]; then
-        echo "   依存関係インストール中..."
-        npm install --silent
-    fi
-    npm start &
-    PROJECT_PID=$!
-elif [ -f "/workspace/sample-project/package.json" ]; then
-    echo "📍 サンプルアプリ起動..."
-    cd /workspace/sample-project
-    if [ ! -d "node_modules" ]; then
-        echo "   依存関係インストール中..."
-        npm install --silent
-    fi
-    npm start &
-    PROJECT_PID=$!
-fi
+sleep 2
 
-# 起動完了の確認
-echo "⏳ サービス起動確認中..."
-sleep 5
-
-# 起動確認
 check_service() {
     local port=$1
     local name=$2
-    if curl -s "http://localhost:$port" > /dev/null 2>&1 || netstat -tuln | grep ":$port " > /dev/null 2>&1; then
+    if curl -s "http://localhost:$port" >/dev/null 2>&1 || netstat -tuln | grep ":$port " >/dev/null 2>&1; then
         echo "✅ $name: 起動完了"
-        return 0
     else
-        echo "⚠️  $name: 起動中 (ポート $port)"
-        return 1
+        echo "⚠️  $name: 起動確認できません（ログ確認: /tmp）"
     fi
 }
 
-check_service $OPENCODE_PORT "OpenCode CLI"
-check_service $OPENCHAMBER_PORT "OpenChamber"
-if [ -n "$PROJECT_PID" ]; then
-    check_service $SAMPLE_PORT "プロジェクトアプリ"
+check_service "$OPENCODE_PORT" "OpenCode CLI"
+check_service "$OPENCHAMBER_PORT" "OpenChamber"
+
+WATCHDOG_SCRIPT=/tmp/opencode-ecc-watchdog.sh
+WATCHDOG_PIDFILE=/tmp/opencode-ecc-watchdog.pid
+cat > "$WATCHDOG_SCRIPT" <<'EOF'
+#!/bin/bash
+set +e
+
+OPENCODE_PORT=${OPENCODE_PORT:-4095}
+OPENCHAMBER_PORT=${OPENCHAMBER_PORT:-3000}
+OPENCODE_HOST=${OPENCODE_HOST:-0.0.0.0}
+OPENCHAMBER_HOST=${OPENCHAMBER_HOST:-0.0.0.0}
+
+is_port_open() {
+    ss -ltn 2>/dev/null | grep -q ":$1\\b"
+}
+
+while true; do
+    if ! is_port_open "$OPENCODE_PORT"; then
+        cd /workspace || true
+        nohup opencode serve --port "$OPENCODE_PORT" --hostname "$OPENCODE_HOST" >> /tmp/opencode-serve.log 2>&1 < /dev/null &
+    fi
+
+    if ! is_port_open "$OPENCHAMBER_PORT"; then
+        cd /workspace || true
+        OPENCODE_HOST=http://localhost:$OPENCODE_PORT OPENCODE_SKIP_START=true nohup openchamber --port "$OPENCHAMBER_PORT" --host "$OPENCHAMBER_HOST" >> /tmp/openchamber.log 2>&1 < /dev/null &
+    fi
+
+    sleep 10
+done
+EOF
+chmod +x "$WATCHDOG_SCRIPT"
+
+if [ -f "$WATCHDOG_PIDFILE" ] && ps -p "$(cat "$WATCHDOG_PIDFILE" 2>/dev/null)" >/dev/null 2>&1; then
+    echo "🔄 監視プロセスは既に稼働中です (PID: $(cat "$WATCHDOG_PIDFILE"))"
+else
+    rm -f "$WATCHDOG_PIDFILE"
+    nohup "$WATCHDOG_SCRIPT" > /tmp/opencode-ecc-watchdog.log 2>&1 < /dev/null &
+    echo $! > "$WATCHDOG_PIDFILE"
+    echo "🛡️ 監視プロセスを開始しました (PID: $(cat "$WATCHDOG_PIDFILE"))"
 fi
 
 echo ""
 echo "🎉 DevContainer 起動完了！"
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-
-# アクセス方法の表示
 echo "📱 アクセス方法:"
-echo ""
-echo "🏠 ローカル環境から:"
 echo "   🎨 OpenChamber:     http://localhost:$OPENCHAMBER_PORT"
 echo "   🤖 OpenCode CLI:    http://localhost:$OPENCODE_PORT"
-echo "   🚀 プロジェクト:     http://localhost:$SAMPLE_PORT"
-echo ""
-
-if [ "$HOST_LAN_IP" != "未検出" ]; then
-    echo "🌐 LAN内の他デバイスから:"
-    echo "   🎨 OpenChamber:     http://$HOST_LAN_IP:$OPENCHAMBER_PORT"
-    echo "   🤖 OpenCode CLI:    http://$HOST_LAN_IP:$OPENCODE_PORT"  
-    echo "   🚀 プロジェクト:     http://$HOST_LAN_IP:$SAMPLE_PORT"
-    echo ""
-fi
-
 if [ "$REMOTE_ACCESS_MODE" = "true" ] && [ -n "$TAILSCALE_IP" ]; then
-    echo "📱 スマートフォン（Tailscale）から:"
-    echo "   🎨 OpenChamber:     http://$TAILSCALE_IP:$OPENCHAMBER_PORT"
-    echo "   🤖 OpenCode CLI:    http://$TAILSCALE_IP:$OPENCODE_PORT"
-    echo "   🚀 プロジェクト:     http://$TAILSCALE_IP:$SAMPLE_PORT"
-    echo ""
+    echo "   📱 Tailscale OpenChamber: http://$TAILSCALE_IP:$OPENCHAMBER_PORT"
+    echo "   📱 Tailscale OpenCode:    http://$TAILSCALE_IP:$OPENCODE_PORT"
 fi
-
-if [ "$AUTH_KEY_VALID" = "false" ]; then
-    echo "💡 スマートフォンアクセスを有効にするには:"
-    echo "   1. https://login.tailscale.com/admin/settings/keys"
-    echo "   2. Auth Key 生成（Reusable + Ephemeral）"
-    echo "   3. .env ファイルに TAILSCALE_AUTH_KEY を設定"
-    echo "   4. ./scripts/setup-tailscale.sh を実行"
-    echo ""
-fi
-
-echo "🎯 次のステップ:"
-echo "   1. ブラウザで OpenChamber にアクセス"
-echo "   2. プロンプトで 'AI開発をサポートして' と入力"
-echo "   3. ECC エージェントが自動で開発支援開始！"
-echo ""
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 
-# プロセス監視とクリーンアップ
+echo "🔄 サービス監視中... (Ctrl+C で停止)"
+
 cleanup() {
     echo ""
     echo "🛑 サービス停止中..."
-    kill $OPENCODE_PID $OPENCHAMBER_PID $PROJECT_PID 2>/dev/null || true
-    if [ "$REMOTE_ACCESS_MODE" = "true" ]; then
-        sudo tailscale down 2>/dev/null || true
-    fi
+    kill "$OPENCODE_PID" "$OPENCHAMBER_PID" 2>/dev/null || true
     echo "✅ クリーンアップ完了"
     exit 0
 }
 
-trap cleanup SIGTERM SIGINT
-
-# フォアグラウンドで実行継続
-echo "🔄 サービス監視中... (Ctrl+C で停止)"
-wait
+if [ "${STARTUP_MONITOR:-0}" = "1" ]; then
+    trap cleanup SIGTERM SIGINT
+    wait
+fi

@@ -4,6 +4,16 @@
 
 set -e
 
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "$SCRIPT_DIR/lib/common.sh"
+set -e
+
+if [[ -d "/workspace/.devcontainer" ]]; then
+    WORKSPACE_ROOT="/workspace"
+else
+    WORKSPACE_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
+fi
+
 # カラー定義
 RED='\033[0;31m'
 GREEN='\033[0;32m'
@@ -13,19 +23,8 @@ CYAN='\033[0;36m'
 NC='\033[0m'
 
 # 設定ファイルパス検出
-if [[ -f "/workspace/.env.template" ]]; then
-    # DevContainer内での実行
-    ENV_FILE="/workspace/.env"
-    ENV_TEMPLATE="/workspace/.env.template"
-elif [[ -f "$(pwd)/.env.template" ]]; then
-    # ローカルでの実行
-    ENV_FILE="$(pwd)/.env"
-    ENV_TEMPLATE="$(pwd)/.env.template"
-else
-    # 現在ディレクトリから検索
-    ENV_FILE=".env"
-    ENV_TEMPLATE=".env.template"
-fi
+ENV_FILE=$(resolve_env_file)
+ENV_TEMPLATE=$(resolve_env_template_file)
 
 echo -e "${BLUE}🔐 環境変数セキュリティチェック開始${NC}"
 
@@ -44,11 +43,11 @@ fi
 # 必須環境変数チェック
 echo -e "${CYAN}🔍 必須環境変数をチェック中...${NC}"
 
-source "$ENV_FILE"
+load_env_file "$ENV_FILE"
 
 # Tailscale Auth Key 検証
-if [[ -z "$TAILSCALE_AUTH_KEY" || "$TAILSCALE_AUTH_KEY" == "your-tailscale-auth-key-here" ]]; then
-    echo -e "${RED}❌ TAILSCALE_AUTH_KEY が設定されていません${NC}"
+if ! is_valid_tailscale_key "$TAILSCALE_AUTH_KEY"; then
+    echo -e "${YELLOW}⚠️  TAILSCALE_AUTH_KEY が未設定です（ローカルモードで利用可能）${NC}"
     echo ""
     echo -e "${YELLOW}📝 Tailscale Auth Key 設定手順:${NC}"
     echo "  1. https://login.tailscale.com/admin/settings/keys にアクセス"
@@ -56,39 +55,38 @@ if [[ -z "$TAILSCALE_AUTH_KEY" || "$TAILSCALE_AUTH_KEY" == "your-tailscale-auth-
     echo "  3. 'Reusable' と 'Ephemeral' をチェック"
     echo "  4. 生成されたキーを .env ファイルに設定"
     echo ""
-    echo -e "${CYAN}今すぐ設定しますか？ (y/N): ${NC}"
-    read -r SET_AUTH_KEY
-    
-    if [[ "$SET_AUTH_KEY" =~ ^[Yy]$ ]]; then
-        echo -e "${CYAN}Tailscale Auth Key を入力してください:${NC}"
-        read -s -p "🔑 Auth Key: " NEW_AUTH_KEY
-        echo ""
-        
-        if [[ -n "$NEW_AUTH_KEY" && "$NEW_AUTH_KEY" =~ ^tskey-auth- ]]; then
-            # .env ファイル更新
-            sed -i "s/TAILSCALE_AUTH_KEY=.*/TAILSCALE_AUTH_KEY=\"$NEW_AUTH_KEY\"/" "$ENV_FILE"
-            echo -e "${GREEN}✅ Tailscale Auth Key を設定しました${NC}"
-            TAILSCALE_AUTH_KEY="$NEW_AUTH_KEY"
-        else
-            echo -e "${RED}❌ 無効なAuth Keyです。後で手動で設定してください${NC}"
-        fi
+    if is_ci_mode; then
+        echo -e "${YELLOW}ℹ️  CIモードのため対話入力をスキップします${NC}"
     else
-        echo -e "${YELLOW}⚠️  後で手動で設定してください${NC}"
+        echo -e "${CYAN}今すぐ設定しますか？ (y/N): ${NC}"
+        read -r SET_AUTH_KEY
+
+        if [[ "$SET_AUTH_KEY" =~ ^[Yy]$ ]]; then
+            echo -e "${CYAN}Tailscale Auth Key を入力してください:${NC}"
+            read -s -p "🔑 Auth Key: " NEW_AUTH_KEY
+            echo ""
+
+            if is_valid_tailscale_key "$NEW_AUTH_KEY"; then
+                # .env ファイル更新
+                upsert_env_value "$ENV_FILE" "TAILSCALE_AUTH_KEY" "$NEW_AUTH_KEY"
+                echo -e "${GREEN}✅ Tailscale Auth Key を設定しました${NC}"
+                TAILSCALE_AUTH_KEY="$NEW_AUTH_KEY"
+            else
+                echo -e "${YELLOW}⚠️  無効なAuth Keyです。後で手動で設定してください${NC}"
+            fi
+        else
+            echo -e "${YELLOW}⚠️  後で手動で設定してください${NC}"
+        fi
     fi
 fi
 
 # Auth Key 形式チェック
-if [[ -n "$TAILSCALE_AUTH_KEY" && "$TAILSCALE_AUTH_KEY" != "your-tailscale-auth-key-here" ]]; then
-    if [[ "$TAILSCALE_AUTH_KEY" =~ ^tskey-auth- ]]; then
+if [[ -n "$TAILSCALE_AUTH_KEY" ]]; then
+    if is_valid_tailscale_key "$TAILSCALE_AUTH_KEY"; then
         echo -e "${GREEN}✅ Tailscale Auth Key: 正常${NC}"
-    else
+    elif ! is_placeholder_tailscale_key "$TAILSCALE_AUTH_KEY"; then
         echo -e "${YELLOW}⚠️  Auth Key の形式が正しくない可能性があります${NC}"
     fi
-fi
-
-# プロジェクト名チェック
-if [[ -z "$PROJECT_NAME" ]]; then
-    echo -e "${YELLOW}⚠️  PROJECT_NAME が設定されていません（オプション）${NC}"
 fi
 
 # ECC プロファイル検証
@@ -105,8 +103,8 @@ else
 fi
 
 # ポート競合チェック
-PORTS=("$OPENCODE_PORT" "$OPENCHAMBER_PORT" "$DEV_SERVER_PORT")
-DEFAULT_PORTS=("4095" "3000" "8080")
+PORTS=("$OPENCODE_PORT" "$OPENCHAMBER_PORT")
+DEFAULT_PORTS=("4095" "3000")
 
 for i in "${!PORTS[@]}"; do
     PORT=${PORTS[$i]:-${DEFAULT_PORTS[$i]}}
@@ -123,23 +121,23 @@ done
 echo -e "${CYAN}🔒 ファイル権限をチェック中...${NC}"
 
 # .env ファイルの権限を制限（機密情報保護）
-chmod 600 "$ENV_FILE"
+ensure_env_permissions "$ENV_FILE"
 echo -e "${GREEN}✅ .env ファイル権限: 600 (所有者のみ読み書き)${NC}"
 
 # スクリプトファイルの実行権限
-SCRIPTS_DIR="/workspace/scripts"
+SCRIPTS_DIR="$WORKSPACE_ROOT/scripts"
 if [[ -d "$SCRIPTS_DIR" ]]; then
     find "$SCRIPTS_DIR" -name "*.sh" -exec chmod +x {} \;
     echo -e "${GREEN}✅ スクリプト実行権限を設定しました${NC}"
 fi
 
 # Git セキュリティチェック
-if [[ -f "/workspace/.gitignore" ]]; then
-    if grep -q "\.env" "/workspace/.gitignore"; then
+if [[ -f "$WORKSPACE_ROOT/.gitignore" ]]; then
+    if grep -q "\.env" "$WORKSPACE_ROOT/.gitignore"; then
         echo -e "${GREEN}✅ .env ファイルがGit管理対象外に設定済み${NC}"
     else
         echo -e "${YELLOW}⚠️  .env ファイルをGit管理対象外に追加します${NC}"
-        echo ".env" >> "/workspace/.gitignore"
+        echo ".env" >> "$WORKSPACE_ROOT/.gitignore"
         echo -e "${GREEN}✅ .gitignore に .env を追加しました${NC}"
     fi
 fi
@@ -150,18 +148,14 @@ echo -e "${BLUE}🔐 セキュリティチェック完了${NC}"
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 
 # Auth Key 状態
-if [[ -n "$TAILSCALE_AUTH_KEY" && "$TAILSCALE_AUTH_KEY" != "your-tailscale-auth-key-here" ]]; then
+if is_valid_tailscale_key "$TAILSCALE_AUTH_KEY"; then
     echo -e "${GREEN}🔑 Tailscale Auth Key: 設定済み${NC}"
 else
     echo -e "${RED}🔑 Tailscale Auth Key: 未設定${NC}"
 fi
 
-# プロジェクト情報
-if [[ -n "$PROJECT_NAME" ]]; then
-    echo -e "${GREEN}📁 プロジェクト: $PROJECT_NAME${NC}"
-else
-    echo -e "${YELLOW}📁 プロジェクト: 未設定${NC}"
-fi
+# 運用モード
+echo -e "${GREEN}🏗️ 基盤モード: 有効${NC}"
 
 # ファイル保護
 echo -e "${GREEN}🔒 ファイル保護: 有効${NC}"
@@ -170,10 +164,8 @@ echo -e "${GREEN}🚫 Git除外設定: 有効${NC}"
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 
 # 最終確認
-if [[ -z "$TAILSCALE_AUTH_KEY" || "$TAILSCALE_AUTH_KEY" == "your-tailscale-auth-key-here" ]]; then
-    echo -e "${RED}⚠️  重要: Tailscale Auth Keyが未設定です${NC}"
-    echo -e "${CYAN}リモートアクセスを使用するには設定が必要です${NC}"
-    exit 1
-else
+if is_valid_tailscale_key "$TAILSCALE_AUTH_KEY"; then
     echo -e "${GREEN}✅ セキュリティ設定完了 - 安全に使用できます${NC}"
+else
+    echo -e "${YELLOW}✅ セキュリティ設定完了 - Tailscale未設定のためローカルモードです${NC}"
 fi
