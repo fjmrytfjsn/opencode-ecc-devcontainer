@@ -41,12 +41,12 @@ if command -v tailscale >/dev/null 2>&1; then
     fi
     
     # Check Tailscale status
-    if sudo tailscale status >/dev/null 2>&1; then
+    if sudo tailscale --socket=/run/tailscale/tailscaled.sock status >/dev/null 2>&1; then
         echo "  ✅ Tailscale 接続確認済み"
-        sudo tailscale status | head -3 | sed 's/^/     /'
+        sudo tailscale --socket=/run/tailscale/tailscaled.sock status | head -3 | sed 's/^/     /'
     else
         echo "  ⚠️  Tailscale 未接続または未認証"
-        echo "     認証コマンド: sudo tailscale up --auth-key=YOUR_KEY"
+        echo "     認証コマンド: sudo tailscale --socket=/run/tailscale/tailscaled.sock up --auth-key=YOUR_KEY"
     fi
 else
     echo "  ❌ Tailscale 未インストール"
@@ -119,7 +119,7 @@ if ! grep -q "127.0.0.1.*$(hostname)" /etc/hosts 2>/dev/null; then
 fi
 
 if ! pgrep -x tailscaled >/dev/null && command -v tailscale >/dev/null 2>&1; then
-    echo "  2. Tailscaled 起動: sudo tailscaled --tun=userspace-networking --socks5-server=localhost:1055 &"
+    echo "  2. Tailscaled 起動: sudo tailscaled --statedir=/var/lib/tailscale --socket=/run/tailscale/tailscaled.sock --tun=userspace-networking --socks5-server=localhost:1055 &"
 fi
 
 if [ ! -f ".env" ]; then

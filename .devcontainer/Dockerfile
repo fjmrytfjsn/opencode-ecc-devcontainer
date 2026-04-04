@@ -52,7 +52,7 @@ RUN --mount=type=cache,target=/tmp/npm-cache \
     wait && \
     # ECC ajv依存関係修正（既知の問題対応）
     ECC_DIR=$(npm list -g ecc-universal 2>/dev/null | head -n1 | awk '{print $1}')/node_modules/ecc-universal && \
-    if [[ -d "$ECC_DIR" ]]; then \
+    if [ -d "$ECC_DIR" ]; then \
         cd "$ECC_DIR" && npm install ajv 2>/dev/null || true; \
     fi && \
     # グローバル ajv もインストール（フォールバック）
@@ -62,7 +62,7 @@ RUN --mount=type=cache,target=/tmp/npm-cache \
 FROM dev-tools AS final
 
 # VSCode ユーザー作成（条件付き - DevContainer対応）
-RUN if ! id "vscode" &>/dev/null; then \
+RUN if ! id "vscode" >/dev/null 2>&1; then \
         useradd -m -s /bin/bash vscode; \
     fi && \
     usermod -aG sudo vscode 2>/dev/null || true && \

@@ -44,10 +44,8 @@ mkdir -p "$HOME/.opencode/config"
 echo "   🔑 所有権設定中..."
 if command -v sudo >/dev/null 2>&1; then
     sudo chown -R vscode:vscode "$HOME/.opencode" 2>/dev/null || chown -R vscode:vscode "$HOME/.opencode" 2>/dev/null || true
-    sudo chown -R vscode:vscode "$HOME" 2>/dev/null || chown -R vscode:vscode "$HOME" 2>/dev/null || true
 else
     chown -R vscode:vscode "$HOME/.opencode" 2>/dev/null || true
-    chown -R vscode:vscode "$HOME" 2>/dev/null || true
 fi
 
 # 3. パーミッション設定

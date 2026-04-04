@@ -23,7 +23,10 @@ if [ -f "/workspace/.env" ]; then
 fi
 
 sanitize_opencode_agents() {
-    local agents_dir="/home/vscode/.opencode/agents"
+    local agents_dir="/home/vscode/.opencode/.agents"
+    if [ ! -d "$agents_dir" ] && [ -d "/home/vscode/.opencode/agents" ]; then
+        agents_dir="/home/vscode/.opencode/agents"
+    fi
     [ -d "$agents_dir" ] || return 0
 
     local changed=0

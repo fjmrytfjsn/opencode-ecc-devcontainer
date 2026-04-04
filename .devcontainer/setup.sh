@@ -83,9 +83,6 @@ mkdir -p ~/.opencode ~/.opencode/.agents ~/.opencode/.agents/skills
 sudo chown -R vscode:vscode ~/.opencode 2>/dev/null || chown -R vscode:vscode ~/.opencode 2>/dev/null || true
 chmod -R 755 ~/.opencode 2>/dev/null || true
 
-# ホームディレクトリ全体の権限確認（念のため）
-sudo chown -R vscode:vscode /home/vscode 2>/dev/null || chown -R vscode:vscode /home/vscode 2>/dev/null || true
-
 # ajv 依存関係エラー修正（既知の問題）
 echo "   🔧 ajv 依存関係修正中..."
 ECC_PATH=$(npm list -g ecc-universal 2>/dev/null | head -n1 | awk '{print $1}' || echo "")

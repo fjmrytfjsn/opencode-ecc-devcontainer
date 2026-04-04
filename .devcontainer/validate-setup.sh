@@ -54,7 +54,12 @@ run_test ".env.template ファイル存在確認" "test -f /workspace/.env.templ
 
 if [[ -f "/workspace/.env" ]]; then
     source /workspace/.env 2>/dev/null || true
-    run_test "TAILSCALE_AUTH_KEY 設定確認" "test -n '$TAILSCALE_AUTH_KEY' && test '$TAILSCALE_AUTH_KEY' != 'your-tailscale-auth-key-here'"
+    if [[ -n "$TAILSCALE_AUTH_KEY" && "$TAILSCALE_AUTH_KEY" != "your-tailscale-auth-key-here" && "$TAILSCALE_AUTH_KEY" != "tskey-auth-xxxxxxxxxxxxxxxxx" ]]; then
+        run_test "TAILSCALE_AUTH_KEY 設定確認" "test -n '$TAILSCALE_AUTH_KEY'"
+    else
+        echo -e "${YELLOW}🔍 [${TESTS_TOTAL}+1] TAILSCALE_AUTH_KEY 設定確認 (オプション)${NC}"
+        echo -e "${YELLOW}   ⚠️  SKIP（ローカルモード許容）${NC}"
+    fi
     run_test "ECC_PROFILE 設定確認" "test -n '$ECC_PROFILE'"
 fi
 
@@ -162,7 +167,7 @@ echo ""
 echo -e "${BLUE}🔄 統合テスト（簡易）${NC}"
 
 if [[ -n "$TAILSCALE_AUTH_KEY" && "$TAILSCALE_AUTH_KEY" != "your-tailscale-auth-key-here" ]]; then
-    run_test "Tailscale 認証テスト" "timeout 10 tailscale up --auth-key='$TAILSCALE_AUTH_KEY' --reset"
+    run_test "Tailscale 認証テスト" "timeout 10 tailscale --socket=/run/tailscale/tailscaled.sock up --auth-key='$TAILSCALE_AUTH_KEY' --reset"
 fi
 
 # テスト結果サマリー
