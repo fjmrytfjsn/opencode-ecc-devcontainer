@@ -56,7 +56,7 @@ declare -a INSTALL_NAMES=()
 
 if ! command -v opencode &> /dev/null; then
     echo "   OpenCode CLI をインストール中..."
-    npm install -g @opencode-ai/cli &
+    npm install -g opencode-ai &
     INSTALL_PIDS+=("$!")
     INSTALL_NAMES+=("OpenCode CLI")
 else
