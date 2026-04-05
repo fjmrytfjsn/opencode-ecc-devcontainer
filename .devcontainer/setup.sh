@@ -49,29 +49,46 @@ if [ -f "$WORKSPACE_ROOT/.env" ]; then
     load_env_file "$WORKSPACE_ROOT/.env"
 fi
 
-# OpenCode CLI の確認・インストール
+# OpenCode/OpenChamber/ECC の確認・インストール
 echo "🛠️  OpenCode CLI セットアップ..."
+declare -a INSTALL_PIDS=()
+declare -a INSTALL_NAMES=()
+
 if ! command -v opencode &> /dev/null; then
     echo "   OpenCode CLI をインストール中..."
-    npm install -g @opencode-ai/cli
+    npm install -g opencode-ai &
+    INSTALL_PIDS+=("$!")
+    INSTALL_NAMES+=("OpenCode CLI")
 else
     echo "   ✅ OpenCode CLI 既にインストール済み: $(opencode --version)"
 fi
 
-# OpenChamber の確認・インストール
 echo "🌐 OpenChamber セットアップ..."
 if ! command -v openchamber &> /dev/null; then
     echo "   OpenChamber をインストール中..."
-    npm install -g @openchamber/web
+    npm install -g @openchamber/web &
+    INSTALL_PIDS+=("$!")
+    INSTALL_NAMES+=("OpenChamber")
 else
     echo "   ✅ OpenChamber 既にインストール済み"
 fi
 
-# ECC の確認・インストール・設定
 echo "🎯 ECC (Everything Claude Code) セットアップ..."
 if ! command -v ecc &> /dev/null; then
     echo "   ECC をインストール中..."
-    npm install -g ecc-universal
+    npm install -g ecc-universal &
+    INSTALL_PIDS+=("$!")
+    INSTALL_NAMES+=("ECC")
+fi
+
+if [ ${#INSTALL_PIDS[@]} -gt 0 ]; then
+    echo "   ⏳ 依存ツールのインストール完了待機中..."
+    for i in "${!INSTALL_PIDS[@]}"; do
+        if ! wait "${INSTALL_PIDS[$i]}"; then
+            echo "   ❌ ${INSTALL_NAMES[$i]} のインストールに失敗しました"
+            exit 1
+        fi
+    done
 fi
 
 # ECC の設定適用
