@@ -28,6 +28,11 @@ npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 
+# 基盤リポジトリ配下に置く別アプリ実装リポジトリ
+# ディレクトリ自体は管理し、READMEのみ追跡する
+projects/*
+!projects/README.md
+
 # 一時ファイル
 tmp/
 temp/
