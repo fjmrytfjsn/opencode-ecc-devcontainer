@@ -41,6 +41,7 @@ temp/
 
 # Docker関連
 .docker/
+.devcontainer/.setup-complete
 
 # Tailscale状態（セキュリティ）
 *.key
