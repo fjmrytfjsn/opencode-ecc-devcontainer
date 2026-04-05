@@ -20,8 +20,6 @@ jobs:
         uses: devcontainers/ci@v0.3
         with:
           imageName: opencode-ecc-devcontainer
-          cacheFrom: type=gha
-          cacheTo: type=gha,mode=max
           push: never
           runCmd: |
             # Node.js バージョン確認
