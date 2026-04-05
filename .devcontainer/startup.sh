@@ -94,6 +94,11 @@ OPENCODE_PORT=${OPENCODE_PORT:-4095}
 OPENCHAMBER_PORT=${OPENCHAMBER_PORT:-3000}
 OPENCODE_HOST=${OPENCODE_HOST:-0.0.0.0}
 OPENCHAMBER_HOST=${OPENCHAMBER_HOST:-0.0.0.0}
+OPENCHAMBER_DEFAULT_PROJECT_DIR=${OPENCHAMBER_DEFAULT_PROJECT_DIR:-/workspace/projects}
+
+if [ ! -d "$OPENCHAMBER_DEFAULT_PROJECT_DIR" ]; then
+    OPENCHAMBER_DEFAULT_PROJECT_DIR="/workspace"
+fi
 
 REMOTE_ACCESS_MODE=false
 TAILSCALE_IP=""
@@ -166,6 +171,28 @@ nohup openchamber --port "$OPENCHAMBER_PORT" --host "$OPENCHAMBER_HOST" > "$OPEN
 OPENCHAMBER_PID=$!
 
 sleep 2
+
+set_default_project_directory() {
+    local target_dir="$1"
+    [ -d "$target_dir" ] || return 0
+
+    local payload
+    payload=$(printf '{"path":"%s"}' "$target_dir")
+
+    for i in {1..10}; do
+        if curl -fsS -X POST "http://localhost:$OPENCHAMBER_PORT/api/opencode/directory" \
+            -H "Content-Type: application/json" \
+            -d "$payload" >/tmp/openchamber-default-dir.json 2>/tmp/openchamber-default-dir.err; then
+            echo "✅ OpenChamber の初期プロジェクトパスを設定: $target_dir"
+            return 0
+        fi
+        sleep 1
+    done
+
+    echo "⚠️  OpenChamber の初期プロジェクトパス設定に失敗しました（起動継続）"
+}
+
+set_default_project_directory "$OPENCHAMBER_DEFAULT_PROJECT_DIR"
 
 check_service() {
     local port=$1
