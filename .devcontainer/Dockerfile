@@ -45,7 +45,7 @@ FROM system-base AS dev-tools
 ENV npm_config_cache=/tmp/npm-cache
 RUN --mount=type=cache,target=/tmp/npm-cache \
     # 並列npm install（依存関係なし）
-    npm install -g --prefer-offline opencode-ai & \
+    npm install -g --prefer-offline @opencode-ai/cli & \
     npm install -g --prefer-offline @openchamber/web & \
     npm install -g --prefer-offline ecc-universal & \
     # 並列処理完了待ち

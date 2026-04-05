@@ -9,7 +9,7 @@
       "installZsh": true,
       "configureZshAsDefaultShell": true,
       "installOhMyZsh": true,
-      "upgradePackages": true,
+      "upgradePackages": false,
       "username": "vscode",
       "userUid": "automatic",
       "userGid": "automatic"
