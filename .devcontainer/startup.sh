@@ -177,6 +177,18 @@ else
     echo "⚠️  OpenCode ECC設定修正スクリプトまたはagentsディレクトリが見つかりません"
 fi
 
+# /plan は planner agent を利用するため、使用可能性の高いモデルへ固定する
+PLANNER_MODEL=${OPENCODE_PLANNER_MODEL:-sonnet}
+PLANNER_AGENT_FILE="/home/vscode/.opencode/agents/planner.md"
+if [ -f "$PLANNER_AGENT_FILE" ]; then
+    if grep -q '^model:\s*' "$PLANNER_AGENT_FILE"; then
+        sed -i -E "s/^model:\s*.*/model: $PLANNER_MODEL/" "$PLANNER_AGENT_FILE"
+    else
+        sed -i -E "/^tools:/a model: $PLANNER_MODEL" "$PLANNER_AGENT_FILE"
+    fi
+    echo "✅ planner agent モデルを設定: $PLANNER_MODEL"
+fi
+
 OPENCODE_LOG=/tmp/opencode-serve.log
 OPENCHAMBER_LOG=/tmp/openchamber.log
 
