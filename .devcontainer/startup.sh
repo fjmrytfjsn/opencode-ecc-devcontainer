@@ -157,6 +157,26 @@ fi
 echo ""
 echo "🚀 基盤サービス起動中..."
 
+# 🔒 マウントされたディレクトリの権限修正
+echo "🔒 マウントディレクトリの権限修正中..."
+sudo chown -R vscode:vscode /home/vscode/.local 2>/dev/null || true
+sudo chown -R vscode:vscode /home/vscode/.opencode 2>/dev/null || true
+sudo chown -R vscode:vscode /home/vscode/.claude 2>/dev/null || true
+mkdir -p /home/vscode/.local/state 2>/dev/null || true
+
+# OpenCode ECC設定の自動修正
+echo "🔧 OpenCode ECC設定を修正中..."
+if [ -f "/workspace/scripts/fix-ecc-agents.py" ] && [ -d "/home/vscode/.opencode/agents" ]; then
+    if python3 /workspace/scripts/fix-ecc-agents.py /home/vscode/.opencode/agents > /tmp/ecc-fix.log 2>&1; then
+        fixed_count=$(grep -c "✅ Fixed:" /tmp/ecc-fix.log || echo "0")
+        echo "✅ OpenCode ECC設定修正完了 (${fixed_count}ファイル)"
+    else
+        echo "⚠️  OpenCode ECC設定修正に失敗 (ログ: /tmp/ecc-fix.log)"
+    fi
+else
+    echo "⚠️  OpenCode ECC設定修正スクリプトまたはagentsディレクトリが見つかりません"
+fi
+
 OPENCODE_LOG=/tmp/opencode-serve.log
 OPENCHAMBER_LOG=/tmp/openchamber.log
 
@@ -192,7 +212,29 @@ set_default_project_directory() {
     echo "⚠️  OpenChamber の初期プロジェクトパス設定に失敗しました（起動継続）"
 }
 
-set_default_project_directory "$OPENCHAMBER_DEFAULT_PROJECT_DIR"
+set_default_project_directories() {
+    local root_dir="$1"
+    [ -d "$root_dir" ] || return 0
+
+    local children=()
+    local child
+    for child in "$root_dir"/*; do
+        [ -d "$child" ] || continue
+        children+=("$child")
+    done
+
+    if [ "${#children[@]}" -eq 0 ]; then
+        set_default_project_directory "$root_dir"
+        return 0
+    fi
+
+    local project_dir
+    for project_dir in "${children[@]}"; do
+        set_default_project_directory "$project_dir"
+    done
+}
+
+set_default_project_directories "$OPENCHAMBER_DEFAULT_PROJECT_DIR"
 
 check_service() {
     local port=$1
