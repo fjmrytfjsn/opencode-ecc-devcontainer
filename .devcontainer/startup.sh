@@ -222,12 +222,17 @@ if ! command -v uv >/dev/null 2>&1; then
     fi
 fi
 
-if command -v uv >/dev/null 2>&1 && ! command -v markitdown >/dev/null 2>&1; then
-    echo "📦 markitdown を uv でインストール中..."
-    if uv tool install markitdown >/tmp/markitdown-install.log 2>&1; then
-        echo "✅ markitdown インストール完了"
-    else
-        echo "⚠️  markitdown インストール失敗 (ログ: /tmp/markitdown-install.log)"
+MARKITDOWN_EXTRAS_MARKER="/home/vscode/.local/share/uv/tools/markitdown/.ecc-all-extras"
+if command -v uv >/dev/null 2>&1; then
+    if ! command -v markitdown >/dev/null 2>&1 || [ ! -f "$MARKITDOWN_EXTRAS_MARKER" ]; then
+        echo "📦 markitdown[all] を uv でインストール中..."
+        if uv tool install --upgrade "markitdown[all]" >/tmp/markitdown-install.log 2>&1; then
+            mkdir -p "$(dirname "$MARKITDOWN_EXTRAS_MARKER")"
+            touch "$MARKITDOWN_EXTRAS_MARKER"
+            echo "✅ markitdown[all] インストール完了"
+        else
+            echo "⚠️  markitdown[all] インストール失敗 (ログ: /tmp/markitdown-install.log)"
+        fi
     fi
 fi
 
