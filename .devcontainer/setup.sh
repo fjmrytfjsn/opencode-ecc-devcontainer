@@ -110,6 +110,20 @@ else
     echo "   ✅ uv 既にインストール済み: $(uv --version 2>/dev/null || echo 'version unknown')"
 fi
 
+MARKITDOWN_EXTRAS_MARKER="/home/vscode/.local/share/uv/tools/markitdown/.ecc-all-extras"
+if command -v uv &> /dev/null; then
+    if ! command -v markitdown &> /dev/null || [[ ! -f "$MARKITDOWN_EXTRAS_MARKER" ]]; then
+        echo "📄 markitdown[all] をインストール中..."
+        if uv tool install --upgrade "markitdown[all]"; then
+            mkdir -p "$(dirname "$MARKITDOWN_EXTRAS_MARKER")"
+            touch "$MARKITDOWN_EXTRAS_MARKER"
+            echo "   ✅ markitdown[all] インストール完了"
+        else
+            echo "   ⚠️  markitdown[all] インストールに失敗しました"
+        fi
+    fi
+fi
+
 # ECC の設定適用
 echo "   ECC設定を適用中..."
 
