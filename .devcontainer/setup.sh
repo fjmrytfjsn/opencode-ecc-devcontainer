@@ -91,6 +91,19 @@ if [ ${#INSTALL_PIDS[@]} -gt 0 ]; then
     done
 fi
 
+# Pythonツール管理用 uv の準備
+if ! command -v uv &> /dev/null; then
+    echo "🐍 uv をインストール中..."
+    if curl -LsSf https://astral.sh/uv/install.sh | sh; then
+        export PATH="/home/vscode/.local/bin:$PATH"
+        echo "   ✅ uv インストール完了"
+    else
+        echo "   ⚠️  uv インストールに失敗しました（後で手動インストールしてください）"
+    fi
+else
+    echo "   ✅ uv 既にインストール済み: $(uv --version 2>/dev/null || echo 'version unknown')"
+fi
+
 # ECC の設定適用
 echo "   ECC設定を適用中..."
 

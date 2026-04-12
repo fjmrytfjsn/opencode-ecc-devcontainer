@@ -189,6 +189,64 @@ if [ -f "$PLANNER_AGENT_FILE" ]; then
     echo "✅ planner agent モデルを設定: $PLANNER_MODEL"
 fi
 
+# MarkItDown skill/command をOpenChamberから使えるように同期
+MARKITDOWN_SEED_DIR="/workspace/.devcontainer/opencode-seed"
+if [ -d "$MARKITDOWN_SEED_DIR" ]; then
+    mkdir -p \
+        /home/vscode/.opencode/skills/markitdown-converter/scripts \
+        /home/vscode/.opencode/commands \
+        /home/vscode/.opencode/instructions
+
+    install -m 755 \
+        "$MARKITDOWN_SEED_DIR/skills/markitdown-converter/scripts/convert.sh" \
+        /home/vscode/.opencode/skills/markitdown-converter/scripts/convert.sh
+    install -m 644 \
+        "$MARKITDOWN_SEED_DIR/skills/markitdown-converter/SKILL.md" \
+        /home/vscode/.opencode/skills/markitdown-converter/SKILL.md
+    install -m 644 \
+        "$MARKITDOWN_SEED_DIR/commands/to-markdown.md" \
+        /home/vscode/.opencode/commands/to-markdown.md
+    install -m 644 \
+        "$MARKITDOWN_SEED_DIR/instructions/markitdown-converter.md" \
+        /home/vscode/.opencode/instructions/markitdown-converter.md
+    echo "✅ MarkItDown skill/command を同期しました"
+fi
+
+if ! command -v uv >/dev/null 2>&1; then
+    echo "📦 uv をインストール中..."
+    if curl -LsSf https://astral.sh/uv/install.sh | sh >/tmp/uv-install.log 2>&1; then
+        export PATH="/home/vscode/.local/bin:$PATH"
+        echo "✅ uv インストール完了"
+    else
+        echo "⚠️  uv インストール失敗 (ログ: /tmp/uv-install.log)"
+    fi
+fi
+
+if command -v uv >/dev/null 2>&1 && ! command -v markitdown >/dev/null 2>&1; then
+    echo "📦 markitdown を uv でインストール中..."
+    if uv tool install markitdown >/tmp/markitdown-install.log 2>&1; then
+        echo "✅ markitdown インストール完了"
+    else
+        echo "⚠️  markitdown インストール失敗 (ログ: /tmp/markitdown-install.log)"
+    fi
+fi
+
+if [ -f /home/vscode/.opencode/opencode.json ]; then
+    python3 - <<'PY'
+import json
+from pathlib import Path
+
+path = Path("/home/vscode/.opencode/opencode.json")
+config = json.loads(path.read_text(encoding="utf-8"))
+instructions = config.get("instructions", [])
+entry = "instructions/markitdown-converter.md"
+if entry not in instructions:
+    instructions.append(entry)
+    config["instructions"] = instructions
+    path.write_text(json.dumps(config, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
+PY
+fi
+
 OPENCODE_LOG=/tmp/opencode-serve.log
 OPENCHAMBER_LOG=/tmp/openchamber.log
 
