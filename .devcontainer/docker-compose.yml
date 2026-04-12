@@ -33,7 +33,13 @@ services:
     # ボリューム
     volumes:
       - ../:/workspace:cached
-      - opencode-data:/home/vscode/.opencode
+      # エージェント設定
+      - ../.devcontainer/data/opencode:/home/vscode/.opencode
+      # OpenCode セッションデータ
+      - ../.devcontainer/data/opencode-storage:/home/vscode/.local/share/opencode
+      # ECC データベース
+      - ../.devcontainer/data/claude:/home/vscode/.claude
+      # Tailscale
       - tailscale-state:/var/lib/tailscale
       - tailscale-run:/run/tailscale
       - /var/run/docker.sock:/var/run/docker-host.sock
@@ -57,8 +63,6 @@ services:
       start_period: 60s
 
 volumes:
-  opencode-data:
-    driver: local
   tailscale-state:
     driver: local
   tailscale-run:

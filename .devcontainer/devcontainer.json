@@ -26,6 +26,9 @@
     "ghcr.io/devcontainers/features/git:1": {
       "ppa": false,
       "version": "latest"
+    },
+    "ghcr.io/devcontainers/features/github-cli:1": {
+      "version": "latest"
     }
   },
   "customizations": {
@@ -73,7 +76,6 @@
   },
   "mounts": [
     "source=${localEnv:HOME}/.ssh,target=/home/vscode/.ssh,type=bind,readonly",
-    "source=opencode-data,target=/home/vscode/.opencode,type=volume",
     "source=tailscale-state,target=/var/lib/tailscale,type=volume"
   ]
 }
