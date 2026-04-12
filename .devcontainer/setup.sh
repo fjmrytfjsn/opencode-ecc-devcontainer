@@ -91,6 +91,12 @@ if [ ${#INSTALL_PIDS[@]} -gt 0 ]; then
     done
 fi
 
+# bind mount 環境では /home/vscode/.local や ~/.opencode が root 所有になるため先に補正
+echo "🔒 ホーム配下ディレクトリ権限を初期化中..."
+sudo mkdir -p /home/vscode/.local /home/vscode/.local/bin /home/vscode/.opencode 2>/dev/null || true
+sudo chown -R vscode:vscode /home/vscode/.local /home/vscode/.opencode 2>/dev/null || \
+  chown -R vscode:vscode /home/vscode/.local /home/vscode/.opencode 2>/dev/null || true
+
 # Pythonツール管理用 uv の準備
 if ! command -v uv &> /dev/null; then
     echo "🐍 uv をインストール中..."
@@ -109,7 +115,8 @@ echo "   ECC設定を適用中..."
 
 # .opencode ディレクトリ権限修正（EACCES エラー対策）
 echo "   🔒 .opencode ディレクトリ権限設定中..."
-mkdir -p ~/.opencode ~/.opencode/.agents ~/.opencode/.agents/skills
+sudo mkdir -p ~/.opencode ~/.opencode/.agents ~/.opencode/.agents/skills 2>/dev/null || \
+  mkdir -p ~/.opencode ~/.opencode/.agents ~/.opencode/.agents/skills
 sudo chown -R vscode:vscode ~/.opencode 2>/dev/null || chown -R vscode:vscode ~/.opencode 2>/dev/null || true
 chmod -R 755 ~/.opencode 2>/dev/null || true
 
