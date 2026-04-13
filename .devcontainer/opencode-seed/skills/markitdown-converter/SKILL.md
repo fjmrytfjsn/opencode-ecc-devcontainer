@@ -17,9 +17,10 @@ Use this skill when you need to transform non-Markdown sources (PDF, Office docs
 ## OpenChamber Usage
 
 1. Explicit command:
+   - Use MCP tool `markitdown.convert_to_markdown(uri)` first
    - `/to-markdown <input> [output.md]`
 2. Natural language:
-   - Ask normally (e.g. "このPDFをMarkdown化して"), then route through `/to-markdown`
+   - Ask normally (e.g. "このPDFをMarkdown化して"), then route through MCP `convert_to_markdown`
 
 ## Notes
 

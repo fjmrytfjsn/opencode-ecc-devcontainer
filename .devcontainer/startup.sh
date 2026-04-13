@@ -236,6 +236,20 @@ if command -v uv >/dev/null 2>&1; then
     fi
 fi
 
+MARKITDOWN_MCP_MARKER="/home/vscode/.local/share/uv/tools/markitdown-mcp/.ecc-installed"
+if command -v uv >/dev/null 2>&1; then
+    if ! command -v markitdown-mcp >/dev/null 2>&1 || [ ! -f "$MARKITDOWN_MCP_MARKER" ]; then
+        echo "📦 markitdown-mcp を uv でインストール中..."
+        if uv tool install --upgrade markitdown-mcp >/tmp/markitdown-mcp-install.log 2>&1; then
+            mkdir -p "$(dirname "$MARKITDOWN_MCP_MARKER")"
+            touch "$MARKITDOWN_MCP_MARKER"
+            echo "✅ markitdown-mcp インストール完了"
+        else
+            echo "⚠️  markitdown-mcp インストール失敗 (ログ: /tmp/markitdown-mcp-install.log)"
+        fi
+    fi
+fi
+
 if [ -f /home/vscode/.opencode/opencode.json ]; then
     python3 - <<'PY'
 import json
@@ -248,7 +262,18 @@ entry = "instructions/markitdown-converter.md"
 if entry not in instructions:
     instructions.append(entry)
     config["instructions"] = instructions
-    path.write_text(json.dumps(config, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
+
+mcp = config.get("mcp", {})
+if "markitdown" not in mcp:
+    mcp["markitdown"] = {
+        "type": "local",
+        "command": ["/home/vscode/.local/bin/markitdown-mcp"],
+        "enabled": True,
+        "timeout": 30000,
+    }
+    config["mcp"] = mcp
+
+path.write_text(json.dumps(config, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
 PY
 fi
 

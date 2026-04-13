@@ -5,7 +5,7 @@ agent: build
 
 # to-markdown
 
-Convert source content into Markdown using MarkItDown.
+Convert source content into Markdown using MarkItDown CLI (fallback when MCP is unavailable).
 
 ## Usage
 

@@ -124,6 +124,20 @@ if command -v uv &> /dev/null; then
     fi
 fi
 
+MARKITDOWN_MCP_MARKER="/home/vscode/.local/share/uv/tools/markitdown-mcp/.ecc-installed"
+if command -v uv &> /dev/null; then
+    if ! command -v markitdown-mcp &> /dev/null || [[ ! -f "$MARKITDOWN_MCP_MARKER" ]]; then
+        echo "🧩 markitdown-mcp をインストール中..."
+        if uv tool install --upgrade markitdown-mcp; then
+            mkdir -p "$(dirname "$MARKITDOWN_MCP_MARKER")"
+            touch "$MARKITDOWN_MCP_MARKER"
+            echo "   ✅ markitdown-mcp インストール完了"
+        else
+            echo "   ⚠️  markitdown-mcp インストールに失敗しました"
+        fi
+    fi
+fi
+
 # ECC の設定適用
 echo "   ECC設定を適用中..."
 
@@ -161,6 +175,16 @@ cat > ~/.opencode/opencode.json << 'EOF'
   "model": "anthropic/claude-sonnet-4-5",
   "small_model": "anthropic/claude-haiku-4-5", 
   "default_agent": "build",
+  "mcp": {
+    "markitdown": {
+      "type": "local",
+      "command": [
+        "/home/vscode/.local/bin/markitdown-mcp"
+      ],
+      "enabled": true,
+      "timeout": 30000
+    }
+  },
   "plugin": [
     "./plugins"
   ]
