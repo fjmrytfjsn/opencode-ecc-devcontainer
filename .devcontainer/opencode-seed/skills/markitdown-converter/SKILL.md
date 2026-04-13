@@ -25,3 +25,4 @@ Use this skill when you need to transform non-Markdown sources (PDF, Office docs
 
 - If output is large, prefer writing to a file and then summarizing key sections.
 - Preserve the generated Markdown as an artifact when reproducibility is needed.
+- When the input is a directory, pass an output directory and convert files in bulk instead of reading the directory as a file.
